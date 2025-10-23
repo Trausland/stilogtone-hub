@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunktemp=globalThis.webpackChunktemp||[]).push([[1903],{1912:t=>{t.exports=JSON.parse('{"blogBasePath":"/stilogtone-hub/blog","blogTitle":"Blog","authorsListPath":"/stilogtone-hub/blog/authors"}')}}]);

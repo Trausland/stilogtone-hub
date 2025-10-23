@@ -1,0 +1,27 @@
+{
+  "id": "monster/header-topbanner",
+  "title": "Header / TopBanner — designmønster",
+  "description": "Her kommer retningslinjer for headerområdet.",
+  "source": "@site/docs/monster/header-topbanner.md",
+  "sourceDirName": "monster",
+  "slug": "/monster/header-topbanner",
+  "permalink": "/stilogtone-hub/docs/monster/header-topbanner",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Trausland/stilogtone-hub/tree/main/docs/monster/header-topbanner.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "header-topbanner",
+    "title": "Header / TopBanner — designmønster"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Translate your site",
+    "permalink": "/stilogtone-hub/docs/tutorial-extras/translate-your-site"
+  },
+  "next": {
+    "title": "Browserstøtte",
+    "permalink": "/stilogtone-hub/docs/teknisk/browserstotte"
+  }
+}

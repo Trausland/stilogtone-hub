@@ -8,6 +8,19 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 
+// Polyfill File API for Node.js < 20
+if (typeof global.File === 'undefined') {
+  global.File = class File {
+    constructor(bits, name, options = {}) {
+      this.name = name;
+      this.type = options.type || '';
+      this.size = bits.length;
+      this.lastModified = options.lastModified || Date.now();
+      this.bits = bits;
+    }
+  };
+}
+
 const BASE_URL = 'https://www.skatteetaten.no';
 const START_URL = 'https://www.skatteetaten.no/stilogtone/';
 const STORYBOOK_BASE = 'https://skatteetaten.github.io/designsystemet';

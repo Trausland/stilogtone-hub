@@ -5,9 +5,9 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'My Site',
-  tagline: 'Dinosaurs are cool',
-  favicon: 'img/favicon.ico',
+  title: 'Søk stil og tone',
+  tagline: 'Finn alt om komponenter, mønstre, stil og utvikling',
+  favicon: 'img/skatteetatenlogo/fav-icon/64x64/png/favicon64x64.png',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -15,14 +15,14 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-   url: 'https://almasy74.github.io',
+   url: 'https://trausland.github.io',
   baseUrl: '/designsystem-hub/',
 
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'trausland', // Usually your GitHub org/user name.
+  projectName: 'designsystem-hub', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -67,77 +67,64 @@ const config: Config = {
     ],
   ],
 
+  headTags: [
+    // Production path (with baseUrl)
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/designsystem-hub/img/skatteetatenlogo/fav-icon/64x64/png/favicon64x64.png',
+        type: 'image/png',
+      },
+    },
+    // Development path (without baseUrl)
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/img/skatteetatenlogo/fav-icon/64x64/png/favicon64x64.png',
+        type: 'image/png',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'shortcut icon',
+        href: '/designsystem-hub/img/skatteetatenlogo/fav-icon/64x64/png/favicon64x64.png',
+        type: 'image/png',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'apple-touch-icon',
+        href: '/designsystem-hub/img/skatteetatenlogo/fav-icon/64x64/png/favicon64x64.png',
+      },
+    },
+  ],
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'light',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     navbar: {
-      title: 'My Site',
-      logo: {
-        alt: 'My Site Logo',
-        src: 'img/logo.svg',
-      },
+      hideOnScroll: true,
       items: [
+        {to: '/', label: 'Søk stil og tone', position: 'right'},
         {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: 'Tutorial',
-        },
-        {to: '/blog', label: 'Blog', position: 'left'},
-        {
-          href: 'https://github.com/facebook/docusaurus',
+          href: 'https://github.com/Skatteetaten/designsystemet/',
           label: 'GitHub',
           position: 'right',
         },
       ],
     },
     footer: {
-      style: 'dark',
-      links: [
-        {
-          title: 'Docs',
-          items: [
-            {
-              label: 'Tutorial',
-              to: '/docs/intro',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      style: 'light',
+      links: [],
+      copyright: `Copyright © ${new Date().getFullYear()} Skatteetaten.`,
     },
     prism: {
       theme: prismThemes.github,

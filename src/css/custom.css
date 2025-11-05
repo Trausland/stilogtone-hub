@@ -32,3 +32,156 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Layout for generator-siden - følger Skatteetatens bredder */
+.site {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1200px) {
+  .site { max-width: 960px; }
+}
+
+@media (max-width: 1000px) {
+  .site { max-width: 560px; }
+}
+
+.semanticArticle {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* Minimal navbar - hide logo and title */
+.navbar__brand {
+  display: none !important;
+}
+
+/* Hide any logo images */
+.navbar__logo {
+  display: none !important;
+}
+
+.navbar__item img {
+  display: none !important;
+}
+
+
+/* Clean navbar styling */
+.navbar {
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.navbar__items {
+  margin-left: auto;
+}
+
+/* Clean footer */
+.footer {
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Hide footer links if empty */
+.footer__links {
+  display: none;
+}
+
+/* Forhåndsvisning skal ha EXAKT samme styling som Storybook - INGEN custom styling */
+/* TopBanner og Footer skal fungere akkurat som utenfor forhåndsvisningen */
+.generator-preview {
+  /* Minimal wrapper - ingen styling som påvirker innholdet */
+  /* IKKE position: relative - det kan påvirke skip link-en sin posisjonering */
+  display: block;
+  min-height: 200px;
+  overflow: visible;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #ffffff;
+}
+
+/* Footer og TopBanner skal ikke påvirkes av padding - skal ha samme bredde som i Storybook */
+/* Footer må ha full bredde uavhengig av inner wrapper */
+.generator-preview > div > div[class*="Footer"],
+.generator-preview > div > [class*="Footer"],
+.generator-preview > [class*="Footer"],
+.generator-preview > div > div[class*="TopBanner"],
+.generator-preview > div > [class*="TopBanner"],
+.generator-preview > [class*="TopBanner"] {
+  position: relative;
+  margin-left: -16px;
+  margin-right: -16px;
+  width: calc(100% + 32px);
+  max-width: none !important;
+  min-width: 320px;
+  box-sizing: border-box;
+}
+
+/* I mobilvisning: Footer og TopBanner skal bryte ut av 320px-wrapper og ha full bredde som i Storybook */
+/* Footer skal få samme bredde som parent (.generator-preview) pluss padding */
+.generator-preview-mobile-wrapper > div[class*="Footer"],
+.generator-preview-mobile-wrapper > [class*="Footer"],
+.generator-preview-mobile-wrapper > div[class*="TopBanner"],
+.generator-preview-mobile-wrapper > [class*="TopBanner"] {
+  position: relative;
+  left: -16px;
+  right: -16px;
+  width: calc(100% + 32px);
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+/* Main-innhold i mobilvisning skal være nøyaktig 320px */
+.generator-preview-mobile-wrapper > main {
+  max-width: 320px !important;
+  width: 320px !important;
+  box-sizing: border-box;
+}
+
+/* Footer-links skal ikke ha custom word-break - la designsystemet håndtere det */
+.generator-preview [class*="Footer"] a,
+.generator-preview [class*="Footer"] * {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  white-space: normal !important;
+}
+
+/* Modaler skal fungere som designsystemet forventer - ingen custom styling */
+/* Sikre at modaler ikke klippes av parent-containere */
+.generator-preview,
+.generator-preview > main {
+  overflow: visible !important;
+}
+
+/* TopBanner og Footer - ingen isolasjon, fungerer som utenfor forhåndsvisningen */
+/* La dem fungere helt normalt uten noen CSS-regler */
+.generator-preview > *:not(main) {
+  /* Ingen CSS-regler - la designsystemets CSS fungere 100% uendret */
+}
+
+/* Fjern KUN Docusaurus CSS-variabler fra hovedinnhold - IKKE fra TopBanner/Footer */
+.generator-preview > main,
+.generator-preview > main * {
+  /* Fjern kun Docusaurus CSS-variabler, IKKE designsystemets */
+  --ifm-color-primary: initial;
+  --ifm-link-color: initial;
+  --ifm-link-decoration: initial;
+  --ifm-link-hover-color: initial;
+  --ifm-font-color-base: initial;
+}
+
+/* Blokker KUN Docusaurus-specifikke klasser i hovedinnhold */
+.generator-preview > main [class*="ifm-"]:not([class*="ds-"]),
+.generator-preview > main [class*="docusaurus-"]:not([class*="ds-"]),
+.generator-preview > main [class*="navbar__"]:not([class*="ds-"]),
+.generator-preview > main [class*="theme-"]:not([class*="ds-"]) {
+  /* Kun Docusaurus-klasser, ikke designsystemets */
+  all: initial;
+}

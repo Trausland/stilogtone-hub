@@ -16,13 +16,13 @@ const config: Config = {
 
   // Set the production url of your site here
    url: 'https://trausland.github.io',
-  baseUrl: '/designsystem-hub/',
+  baseUrl: '/stilogtone-hub/',
 
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'trausland', // Usually your GitHub org/user name.
-  projectName: 'designsystem-hub', // Usually your repo name.
+  projectName: 'stilogtone-hub', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 

@@ -20,42 +20,29 @@ function SearchResults({ query }: { query: string }) {
   const [indexLoaded, setIndexLoaded] = useState(false);
   
   // Load search index on mount
+  const searchIndexUrl = useBaseUrl('/search-index.json');
+  
   useEffect(() => {
     if (!indexLoaded) {
-      // In development, baseUrl is '/', in production it's '/designsystem-hub/'
-      // Try both paths
-      const paths = ['/search-index.json', '/designsystem-hub/search-index.json'];
-      let currentPath = 0;
-      
-      const tryLoad = (path: string) => {
-        fetch(path)
-          .then(response => {
-            if (response.ok) {
-              return response.json();
-            }
-            throw new Error(`Failed to load search index: ${response.status}`);
-          })
-          .then(data => {
-            console.log('Search index loaded:', data.length, 'entries');
-            setSearchIndex(data);
-            setIndexLoaded(true);
-          })
-          .catch(error => {
-            // Try next path if available
-            currentPath++;
-            if (currentPath < paths.length) {
-              tryLoad(paths[currentPath]);
-            } else {
-              console.warn('Could not load search index from any path:', error);
-              setSearchIndex([]);
-              setIndexLoaded(true);
-            }
-          });
-      };
-      
-      tryLoad(paths[0]);
+      fetch(searchIndexUrl)
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error(`Failed to load search index: ${response.status}`);
+        })
+        .then(data => {
+          console.log('Search index loaded:', data.length, 'entries');
+          setSearchIndex(data);
+          setIndexLoaded(true);
+        })
+        .catch(error => {
+          console.warn('Could not load search index:', error);
+          setSearchIndex([]);
+          setIndexLoaded(true);
+        });
     }
-  }, [indexLoaded]);
+  }, [indexLoaded, searchIndexUrl]);
   
   const results = useMemo(() => {
     if (!query || query.trim().length < 2 || !indexLoaded || searchIndex.length === 0) {

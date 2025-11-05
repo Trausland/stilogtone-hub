@@ -69,6 +69,16 @@ const componentPropsDefinitions: Record<string, PropDefinition[]> = {
   ],
 };
 
+// Mapping fra komponent til navn brukt i componentPropsDefinitions
+const componentToPropName: Record<string, string> = {
+  [Button]: 'Button',
+  [Modal]: 'Modal',
+  [TextField]: 'TextField',
+  [Alert]: 'Alert',
+  [Card]: 'Card',
+  [Link]: 'Link',
+};
+
 function normalize(text: string) {
   return text
     .toLowerCase()
@@ -997,10 +1007,17 @@ export default function Generator(): React.JSX.Element {
       const normalized = normalize(lines[i]);
       const info = componentMap[normalized];
       if (info && info.component) {
-        // Hent komponentnavn
-        const componentName = typeof info.component === 'string' 
-          ? info.component 
-          : (info.component as any).name || lines[i];
+        // Hent komponentnavn - bruk eksplisitt mapping hvis tilgjengelig
+        let componentName: string;
+        if (typeof info.component === 'string') {
+          componentName = info.component;
+        } else if (componentToPropName[info.component as any]) {
+          // Bruk eksplisitt mapping for props-støttede komponenter
+          componentName = componentToPropName[info.component as any];
+        } else {
+          // Fallback til komponentnavn eller original tekst
+          componentName = (info.component as any).name || (info.component as any).displayName || lines[i];
+        }
         names[i] = componentName;
       }
     }

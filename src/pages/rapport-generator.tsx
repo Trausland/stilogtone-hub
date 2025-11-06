@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '@theme/Layout';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import '@skatteetaten/ds-core-designtokens/index.css';
 import { TextField, TextArea, Select, FileUploader } from '@skatteetaten/ds-forms';
 import { Button } from '@skatteetaten/ds-buttons';
@@ -185,6 +186,7 @@ const standardtekster: Record<string, string[]> = {
 };
 
 export default function RapportGenerator(): React.JSX.Element {
+  const baseUrl = useBaseUrl('/');
   const [rapportData, setRapportData] = useState<RapportData>({
     tittel: '',
     testdato: new Date().toISOString().split('T')[0],
@@ -1762,6 +1764,9 @@ export default function RapportGenerator(): React.JSX.Element {
           // Fortsett selv om Firebase-opplasting feiler
           alert('Rapport eksportert lokalt, men kunne ikke lagre i arkivet. Se konsollen for detaljer.');
         }
+      } else {
+        // Bruker er ikke logget inn - vis melding om at filen er lastet ned lokalt
+        alert('Rapport eksportert lokalt. Logg inn for å lagre i arkivet.');
       }
     } catch (error) {
       console.error('Feil ved Word-eksport:', error);
@@ -1796,7 +1801,7 @@ export default function RapportGenerator(): React.JSX.Element {
           </div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <a
-              href="/arkiv"
+              href={`${baseUrl}arkiv`}
               style={{
                 padding: '10px 20px',
                 fontSize: '14px',
@@ -1821,7 +1826,7 @@ export default function RapportGenerator(): React.JSX.Element {
               Arkiv
             </a>
             <a
-              href="/login"
+              href={`${baseUrl}login`}
               style={{
                 padding: '10px 20px',
                 fontSize: '14px',

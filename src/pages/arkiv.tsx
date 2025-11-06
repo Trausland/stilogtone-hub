@@ -4,6 +4,7 @@ import { collection, query, orderBy, getDocs, deleteDoc, doc } from 'firebase/fi
 import { ref, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '@site/src/utils/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import '@skatteetaten/ds-core-designtokens/index.css';
 
 interface RapportMetadata {
@@ -23,6 +24,7 @@ export default function Arkiv(): React.JSX.Element {
   const [user, setUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTestetAv, setFilterTestetAv] = useState('');
+  const baseUrl = useBaseUrl('/');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -134,7 +136,7 @@ export default function Arkiv(): React.JSX.Element {
             Du må være innlogget for å se arkivet.
           </p>
           <a 
-            href="/rapport-generator"
+            href={`${baseUrl}rapport-generator`}
             style={{
               display: 'inline-block',
               padding: '12px 24px',
@@ -167,7 +169,7 @@ export default function Arkiv(): React.JSX.Element {
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <a
-              href="/rapport-generator"
+              href={`${baseUrl}rapport-generator`}
               style={{
                 padding: '8px 16px',
                 fontSize: '14px',

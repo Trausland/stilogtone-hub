@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '@theme/Layout';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@site/src/utils/firebase';
-import { useNavigate } from 'react-router-dom';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import '@skatteetaten/ds-core-designtokens/index.css';
 
 export default function Login(): React.JSX.Element {
@@ -11,6 +11,7 @@ export default function Login(): React.JSX.Element {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const baseUrl = useBaseUrl('/');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ export default function Login(): React.JSX.Element {
         await signInWithEmailAndPassword(auth, email, password);
       }
       // Redirect vil håndteres av onAuthStateChanged i arkiv-siden
-      window.location.href = '/arkiv';
+      window.location.href = `${baseUrl}arkiv`;
     } catch (error: any) {
       console.error('Feil ved innlogging:', error);
       setError(error.message || 'Kunne ikke logge inn. Sjekk e-post og passord.');
@@ -152,7 +153,7 @@ export default function Login(): React.JSX.Element {
 
         <div style={{ marginTop: '24px', textAlign: 'center' }}>
           <a 
-            href="/rapport-generator"
+            href={`${baseUrl}rapport-generator`}
             style={{
               color: '#005AA0',
               textDecoration: 'none',

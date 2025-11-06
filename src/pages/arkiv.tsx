@@ -27,6 +27,12 @@ export default function Arkiv(): React.JSX.Element {
   const baseUrl = useBaseUrl('/');
 
   useEffect(() => {
+    // Kun kjøre på klientsiden (ikke under bygget)
+    if (typeof window === 'undefined' || !auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
@@ -42,6 +48,12 @@ export default function Arkiv(): React.JSX.Element {
   }, []);
 
   const lastInnRapporter = async () => {
+    // Kun kjøre på klientsiden og hvis db er tilgjengelig
+    if (typeof window === 'undefined' || !db) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const q = query(collection(db, 'rapporter'), orderBy('opprettet', 'desc'));

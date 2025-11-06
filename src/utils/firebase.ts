@@ -9,17 +9,38 @@ import { getStorage } from 'firebase/storage';
 // 2. Velg prosjektet ditt (eller opprett et nytt)
 // 3. Gå til Project settings (tannhjul-ikonet)
 // 4. Scroll ned til "Your apps" og klikk Web-ikonet (</>)
-// 5. Kopier verdiene fra firebaseConfig objektet og lim dem inn nedenfor
+// 5. Kopier verdiene fra firebaseConfig objektet
+// 6. Opprett en .env fil i prosjektets rot-mappe og legg til verdiene der
 
-// Firebase-konfigurasjon - direkte fra Firebase Console
-const firebaseConfig = {
-  apiKey: "AIzaSyA_GTqMR6p5q2xvCsEW4lUiPXudm_ymCsk",
-  authDomain: "uu-rapportgenerator.firebaseapp.com",
-  projectId: "uu-rapportgenerator",
-  storageBucket: "uu-rapportgenerator.firebasestorage.app",
-  messagingSenderId: "839509330331",
-  appId: "1:839509330331:web:c55bed3a460b24840db93e"
-};
+// Firebase-konfigurasjon fra miljøvariabler
+// I Docusaurus lastes miljøvariabler inn i docusaurus.config.ts via dotenv
+// og eksponeres via customFields, som er tilgjengelig på klientsiden
+function getFirebaseConfig() {
+  // Prøv først å hente fra window.__docusaurus (klientside)
+  if (typeof window !== 'undefined' && (window as any).__docusaurus) {
+    const context = (window as any).__docusaurus;
+    if (context?.siteConfig?.customFields?.firebase) {
+      return context.siteConfig.customFields.firebase;
+    }
+  }
+  
+  // Fallback til process.env (server-side/byggetidspunkt)
+  return {
+    apiKey: process.env.FIREBASE_API_KEY || '',
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
+    projectId: process.env.FIREBASE_PROJECT_ID || '',
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
+    appId: process.env.FIREBASE_APP_ID || ''
+  };
+}
+
+const firebaseConfig = getFirebaseConfig();
+
+// Valider at alle nødvendige miljøvariabler er satt
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+  console.error('Firebase-konfigurasjon mangler! Vennligst sett opp miljøvariabler i .env filen.');
+}
 
 // Initialiser Firebase
 const app = initializeApp(firebaseConfig);

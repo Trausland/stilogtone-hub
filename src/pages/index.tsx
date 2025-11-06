@@ -823,6 +823,7 @@ export default function Home(): React.JSX.Element {
             backgroundColor: '#ffffff',
             borderRadius: '16px',
             border: '1px solid #e2e8f0',
+            marginBottom: '24px',
           }}>
             <h3 style={{
               fontSize: '24px',
@@ -866,6 +867,59 @@ export default function Home(): React.JSX.Element {
               }}
             >
               Åpne generator
+            </Link>
+          </div>
+
+          {/* Rapport Generator CTA */}
+          <div style={{
+            textAlign: 'center',
+            padding: '48px 24px',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+          }}>
+            <h3 style={{
+              fontSize: '24px',
+              fontWeight: '600',
+              marginBottom: '12px',
+              color: '#0f172a',
+            }}>
+              UU-rapport-generator
+            </h3>
+            <p style={{
+              color: '#64748b',
+              fontSize: '16px',
+              marginBottom: '24px',
+              maxWidth: '500px',
+              margin: '0 auto 24px',
+            }}>
+              Fyll ut og generer profesjonelle UU-testrapporter med automatisk struktur og eksport til Word/PDF
+            </p>
+            <Link
+              to="/rapport-generator"
+              style={{
+                display: 'inline-block',
+                padding: '14px 28px',
+                backgroundColor: '#005AA0',
+                color: '#ffffff',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '16px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#0066b3';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#005AA0';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              Åpne rapportgenerator
             </Link>
           </div>
         </div>

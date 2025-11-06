@@ -16,7 +16,8 @@ const config: Config = {
 
   // Set the production url of your site here
    url: 'https://trausland.github.io',
-  baseUrl: '/stilogtone-hub/',
+  // Bruk '/' i utvikling, '/stilogtone-hub/' i produksjon
+  baseUrl: process.env.NODE_ENV === 'production' ? '/stilogtone-hub/' : '/',
 
 
   // GitHub pages deployment config.

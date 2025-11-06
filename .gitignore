@@ -18,3 +18,12 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Generated Word documents
+*.docx
+
+# Extracted repos
+extracted-repos/
+
+# Documentation files (optional, kan legges til hvis ønskelig)
+# FIREBASE_SETUP.md

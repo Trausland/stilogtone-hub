@@ -17,30 +17,45 @@ import { getStorage } from 'firebase/storage';
 // og eksponeres via inline script tag i HTML-en
 function getFirebaseConfig() {
   // Prøv først å hente fra inline script tag i HTML-en (klientside)
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    // Prøv flere ganger - script tag kan ikke være lastet ennå
     const configScript = document.getElementById('firebase-config');
-    if (configScript && configScript.textContent) {
-      try {
-        const config = JSON.parse(configScript.textContent);
-        if (config.apiKey && config.authDomain && config.projectId) {
-          return config;
+    if (configScript) {
+      const content = configScript.textContent || configScript.innerHTML;
+      if (content && content.trim()) {
+        try {
+          const config = JSON.parse(content);
+          if (config.apiKey && config.authDomain && config.projectId) {
+            console.log('Firebase-konfigurasjon hentet fra script tag');
+            return config;
+          } else {
+            console.warn('Firebase-konfigurasjon i script tag mangler nødvendige felter:', config);
+          }
+        } catch (e) {
+          console.error('Feil ved parsing av Firebase-konfigurasjon fra script tag:', e, 'Content:', content);
         }
-      } catch (e) {
-        console.error('Feil ved parsing av Firebase-konfigurasjon:', e);
+      } else {
+        console.warn('Firebase-konfigurasjon script tag er tom');
       }
+    } else {
+      console.warn('Firebase-konfigurasjon script tag ikke funnet i DOM');
     }
     
     // Fallback: Prøv å hente fra window.__docusaurus (hvis tilgjengelig)
     const docusaurus = (window as any).__docusaurus;
     if (docusaurus?.siteConfig?.customFields?.firebase) {
-      return docusaurus.siteConfig.customFields.firebase;
+      const config = docusaurus.siteConfig.customFields.firebase;
+      if (config.apiKey && config.authDomain && config.projectId) {
+        console.log('Firebase-konfigurasjon hentet fra Docusaurus context');
+        return config;
+      }
     }
   }
   
   // Fallback til process.env (kun på server-side/byggetidspunkt)
   // Sjekk at process eksisterer før vi prøver å bruke det
   if (typeof process !== 'undefined' && process.env) {
-    return {
+    const config = {
       apiKey: process.env.FIREBASE_API_KEY || '',
       authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
       projectId: process.env.FIREBASE_PROJECT_ID || '',
@@ -48,9 +63,14 @@ function getFirebaseConfig() {
       messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
       appId: process.env.FIREBASE_APP_ID || ''
     };
+    if (config.apiKey && config.authDomain && config.projectId) {
+      console.log('Firebase-konfigurasjon hentet fra process.env');
+      return config;
+    }
   }
   
   // Hvis vi er på klientsiden og ikke har funnet konfigurasjon, returner tomme verdier
+  console.error('Firebase-konfigurasjon ikke funnet! Sjekk at miljøvariabler er satt opp.');
   return {
     apiKey: '',
     authDomain: '',
@@ -133,15 +153,20 @@ function initializeFirebase() {
 }
 
 // Initialiser Firebase ved første bruk
-// På klientsiden, vent til DOM-en er klar
+// På klientsiden, vent til DOM-en er klar og script tag er lastet
 if (typeof window !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+  const tryInitialize = () => {
+    // Vent litt ekstra for å sikre at script tag er lastet
+    setTimeout(() => {
       initializeFirebase();
-    });
+    }, 100);
+  };
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInitialize);
   } else {
-    // DOM-en er allerede klar
-    initializeFirebase();
+    // DOM-en er allerede klar, men vent litt for script tag
+    tryInitialize();
   }
 } else {
   // Server-side/byggetidspunkt
@@ -151,9 +176,28 @@ if (typeof window !== 'undefined') {
 // Eksporter getters som sjekker initialisering før bruk
 // Dette sikrer at Firebase alltid er initialisert når det brukes
 export const getAuthInstance = () => {
-  if (!initialized) initializeFirebase();
+  // Prøv å initialisere hvis ikke allerede gjort
+  if (!initialized) {
+    initializeFirebase();
+  }
+  
+  // Hvis auth ikke er gyldig, prøv å initialisere på nytt (i tilfelle script tag ikke var klar)
   if (!auth || (typeof auth === 'object' && Object.keys(auth).length === 0)) {
-    throw new Error('Firebase Authentication er ikke initialisert. Sjekk at Firebase-konfigurasjonen er riktig.');
+    // Reset initialisering og prøv igjen
+    initialized = false;
+    initializeFirebase();
+    
+    // Sjekk igjen etter ny initialisering
+    if (!auth || (typeof auth === 'object' && Object.keys(auth).length === 0)) {
+      const config = getFirebaseConfig();
+      console.error('Firebase Authentication feilet. Konfigurasjon:', {
+        hasApiKey: !!config.apiKey,
+        hasAuthDomain: !!config.authDomain,
+        hasProjectId: !!config.projectId,
+        apiKeyLength: config.apiKey?.length || 0
+      });
+      throw new Error('Firebase Authentication er ikke initialisert. Sjekk at Firebase-konfigurasjonen er riktig og at miljøvariabler er satt opp i GitHub Secrets.');
+    }
   }
   return auth;
 };

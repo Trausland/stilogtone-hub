@@ -5,6 +5,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "build:search-index": "node scripts/build-search-index.js",
+    "check-env": "node scripts/check-env.js",
     "prestart": "npm run build:search-index",
     "prebuild": "npm run build:search-index",
     "start": "docusaurus start",

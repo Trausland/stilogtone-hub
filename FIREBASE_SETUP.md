@@ -45,7 +45,14 @@ Denne guiden forklarer hvordan du setter opp Firebase for arkiv-funksjonaliteten
 
 **VIKTIG:** Aldri hardkod Firebase-konfigurasjonen direkte i koden! Bruk alltid miljøvariabler.
 
-Opprett en `.env` eller `.env.local` fil i prosjektets rot-mappe:
+### For lokal utvikling
+
+1. Kopier `env.example.txt` til `.env`:
+   ```bash
+   cp env.example.txt .env
+   ```
+
+2. Fyll inn dine Firebase-verdier i `.env`-filen:
 
 ```env
 FIREBASE_API_KEY=din-api-key
@@ -57,6 +64,43 @@ FIREBASE_APP_ID=1:123456789:web:abcdef123456
 ```
 
 **Sikkerhet:** `.env` filen er allerede lagt til i `.gitignore`, så den vil ikke bli pushet til GitHub. Dette beskytter dine API-nøkler.
+
+### For GitHub Pages deploy
+
+For å deploye til GitHub Pages, må du sette opp Firebase-konfigurasjonen som **GitHub Secrets**:
+
+1. Gå til ditt repository på GitHub
+2. Klikk på **Settings** > **Secrets and variables** > **Actions**
+3. Klikk på **New repository secret** for hver av følgende secrets:
+
+   - **Name:** `FIREBASE_API_KEY`
+     - **Value:** Din Firebase API Key (f.eks. `AIzaSyALpl9k6hK_BFe6I21v9tgnyZjjgDOuzYk`)
+
+   - **Name:** `FIREBASE_AUTH_DOMAIN`
+     - **Value:** Din Firebase Auth Domain (f.eks. `ditt-prosjekt.firebaseapp.com`)
+
+   - **Name:** `FIREBASE_PROJECT_ID`
+     - **Value:** Din Firebase Project ID (f.eks. `ditt-prosjekt-id`)
+
+   - **Name:** `FIREBASE_STORAGE_BUCKET`
+     - **Value:** Din Firebase Storage Bucket (f.eks. `ditt-prosjekt.firebasestorage.app`)
+
+   - **Name:** `FIREBASE_MESSAGING_SENDER_ID`
+     - **Value:** Din Firebase Messaging Sender ID (f.eks. `123456789`)
+
+   - **Name:** `FIREBASE_APP_ID`
+     - **Value:** Din Firebase App ID (f.eks. `1:123456789:web:abcdef123456`)
+
+4. Klikk **Add secret** for hver secret
+
+**VIKTIG:** 
+- Sjekk at secret-navnene matcher **eksakt** (case-sensitive)
+- Sjekk at du har kopiert alle verdiene korrekt (ingen mellomrom, ingen ekstra tegn)
+- Hvis du oppdaterer secrets, må du manuelt trigge en ny workflow-kjøring eller pushe en ny commit
+
+**Etter at secrets er satt opp:**
+- GitHub Actions vil automatisk bruke disse secrets når den bygger og deployer
+- Du trenger ikke gjøre noe mer - bare push til `main`-branchen
 
 ## Steg 7: Sett opp Firestore Security Rules
 

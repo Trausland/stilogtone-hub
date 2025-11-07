@@ -17,21 +17,34 @@ import { getStorage } from 'firebase/storage';
 // og eksponeres via customFields, som er tilgjengelig på klientsiden
 function getFirebaseConfig() {
   // Prøv først å hente fra window.__docusaurus (klientside)
-  if (typeof window !== 'undefined' && (window as any).__docusaurus) {
-    const context = (window as any).__docusaurus;
-    if (context?.siteConfig?.customFields?.firebase) {
-      return context.siteConfig.customFields.firebase;
+  if (typeof window !== 'undefined') {
+    const docusaurus = (window as any).__docusaurus;
+    if (docusaurus?.siteConfig?.customFields?.firebase) {
+      return docusaurus.siteConfig.customFields.firebase;
     }
   }
   
-  // Fallback til process.env (server-side/byggetidspunkt)
+  // Fallback til process.env (kun på server-side/byggetidspunkt)
+  // Sjekk at process eksisterer før vi prøver å bruke det
+  if (typeof process !== 'undefined' && process.env) {
+    return {
+      apiKey: process.env.FIREBASE_API_KEY || '',
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
+      projectId: process.env.FIREBASE_PROJECT_ID || '',
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
+      appId: process.env.FIREBASE_APP_ID || ''
+    };
+  }
+  
+  // Hvis vi er på klientsiden og ikke har funnet konfigurasjon, returner tomme verdier
   return {
-    apiKey: process.env.FIREBASE_API_KEY || '',
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
-    projectId: process.env.FIREBASE_PROJECT_ID || '',
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
-    appId: process.env.FIREBASE_APP_ID || ''
+    apiKey: '',
+    authDomain: '',
+    projectId: '',
+    storageBucket: '',
+    messagingSenderId: '',
+    appId: ''
   };
 }
 
@@ -52,7 +65,9 @@ let db: any = null;
 let storage: any = null;
 
 // Kun initialiser Firebase på klientsiden eller hvis konfigurasjonen er gyldig
-if (isValidConfig && (typeof window !== 'undefined' || process.env.FIREBASE_API_KEY)) {
+// Sjekk at process eksisterer før vi prøver å bruke det
+const hasEnvVar = typeof process !== 'undefined' && process.env && process.env.FIREBASE_API_KEY;
+if (isValidConfig && (typeof window !== 'undefined' || hasEnvVar)) {
   try {
     app = initializeApp(firebaseConfig);
     

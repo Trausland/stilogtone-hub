@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '@theme/Layout';
 import { collection, query, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { ref, getDownloadURL, deleteObject } from 'firebase/storage';
-import { auth, db, storage } from '@site/src/utils/firebase';
+import { getAuthInstance, getDbInstance, getStorageInstance } from '@site/src/utils/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import '@skatteetaten/ds-core-designtokens/index.css';
@@ -28,35 +28,42 @@ export default function Arkiv(): React.JSX.Element {
 
   useEffect(() => {
     // Kun kjøre på klientsiden (ikke under bygget)
-    if (typeof window === 'undefined' || !auth) {
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        lastInnRapporter();
-      } else {
-        setUser(null);
-        setRapporter([]);
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const lastInnRapporter = async () => {
-    // Kun kjøre på klientsiden og hvis db er tilgjengelig
-    if (typeof window === 'undefined' || !db) {
+    if (typeof window === 'undefined') {
       setLoading(false);
       return;
     }
 
     try {
+      const authInstance = getAuthInstance();
+      const unsubscribe = onAuthStateChanged(authInstance, (currentUser) => {
+        if (currentUser) {
+          setUser(currentUser);
+          lastInnRapporter();
+        } else {
+          setUser(null);
+          setRapporter([]);
+          setLoading(false);
+        }
+      });
+
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Feil ved Firebase auth:', error);
+      setLoading(false);
+    }
+  }, []);
+
+  const lastInnRapporter = async () => {
+    // Kun kjøre på klientsiden
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const dbInstance = getDbInstance();
       setLoading(true);
-      const q = query(collection(db, 'rapporter'), orderBy('opprettet', 'desc'));
+      const q = query(collection(dbInstance, 'rapporter'), orderBy('opprettet', 'desc'));
       const querySnapshot = await getDocs(q);
       
       const rapporterData: RapportMetadata[] = [];
@@ -82,12 +89,15 @@ export default function Arkiv(): React.JSX.Element {
     }
 
     try {
+      const dbInstance = getDbInstance();
+      const storageInstance = getStorageInstance();
+      
       // Slett fra Firestore
-      await deleteDoc(doc(db, 'rapporter', rapportId));
+      await deleteDoc(doc(dbInstance, 'rapporter', rapportId));
       
       // Slett fil fra Storage hvis den finnes
       if (filUrl) {
-        const fileRef = ref(storage, filUrl);
+        const fileRef = ref(storageInstance, filUrl);
         await deleteObject(fileRef);
       }
       
@@ -102,7 +112,8 @@ export default function Arkiv(): React.JSX.Element {
 
   const lastNedFil = async (filUrl: string, filnavn: string) => {
     try {
-      const url = await getDownloadURL(ref(storage, filUrl));
+      const storageInstance = getStorageInstance();
+      const url = await getDownloadURL(ref(storageInstance, filUrl));
       const a = document.createElement('a');
       a.href = url;
       a.download = filnavn;
@@ -117,7 +128,8 @@ export default function Arkiv(): React.JSX.Element {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      const authInstance = getAuthInstance();
+      await signOut(authInstance);
     } catch (error) {
       console.error('Feil ved utlogging:', error);
     }

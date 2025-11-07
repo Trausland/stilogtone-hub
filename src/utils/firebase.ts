@@ -148,23 +148,34 @@ if (typeof window !== 'undefined') {
   initializeFirebase();
 }
 
-// Eksporter getters som initialiserer Firebase hvis nødvendig
+// Eksporter getters som sjekker initialisering før bruk
+// Dette sikrer at Firebase alltid er initialisert når det brukes
 export const getAuthInstance = () => {
   if (!initialized) initializeFirebase();
+  if (!auth || (typeof auth === 'object' && Object.keys(auth).length === 0)) {
+    throw new Error('Firebase Authentication er ikke initialisert. Sjekk at Firebase-konfigurasjonen er riktig.');
+  }
   return auth;
 };
 
 export const getDbInstance = () => {
   if (!initialized) initializeFirebase();
+  if (!db || (typeof db === 'object' && Object.keys(db).length === 0)) {
+    throw new Error('Firestore er ikke initialisert. Sjekk at Firebase-konfigurasjonen er riktig.');
+  }
   return db;
 };
 
 export const getStorageInstance = () => {
   if (!initialized) initializeFirebase();
+  if (!storage || (typeof storage === 'object' && Object.keys(storage).length === 0)) {
+    throw new Error('Firebase Storage er ikke initialisert. Sjekk at Firebase-konfigurasjonen er riktig.');
+  }
   return storage;
 };
 
-// Eksporter direkte for bakoverkompatibilitet (vil initialisere ved første bruk)
+// Eksporter direkte for bakoverkompatibilitet (bruk getters i stedet)
+// Disse kan være null hvis Firebase ikke er initialisert
 export { auth, db, storage };
 export default app;
 

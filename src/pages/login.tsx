@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Layout from '@theme/Layout';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@site/src/utils/firebase';
+import { getAuthInstance } from '@site/src/utils/firebase';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import '@skatteetaten/ds-core-designtokens/index.css';
 
@@ -19,10 +19,11 @@ export default function Login(): React.JSX.Element {
     setLoading(true);
 
     try {
+      const authInstance = getAuthInstance();
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(authInstance, email, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(authInstance, email, password);
       }
       // Redirect vil håndteres av onAuthStateChanged i arkiv-siden
       window.location.href = `${baseUrl}arkiv`;

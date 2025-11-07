@@ -12,7 +12,7 @@ import { Document, Packer, Paragraph as DocxParagraph, TextRun, HeadingLevel, Ta
 import { saveAs } from 'file-saver';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc as firestoreDoc } from 'firebase/firestore';
-import { auth, db, storage } from '@site/src/utils/firebase';
+import { getAuthInstance, getDbInstance, getStorageInstance } from '@site/src/utils/firebase';
 
 // Typer
 type WCAGStatus = 'Åpent' | 'Lukket' | 'Revidert';
@@ -1690,31 +1690,36 @@ export default function RapportGenerator(): React.JSX.Element {
       saveAs(blob, filnavn);
       
       // Last opp til Firebase hvis bruker er innlogget
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        try {
-          // Sjekk om det allerede finnes en rapport med samme metadata
-          const rapportTittel = rapportData.tittel || 'Uten tittel';
-          const rapportQuery = query(
-            collection(db, 'rapporter'),
-            where('tittel', '==', rapportTittel),
-            where('testdato', '==', rapportData.testdato),
-            where('testUrl', '==', rapportData.testUrl),
-            where('testetAv', '==', rapportData.testetAv),
-            where('opprettetAv', '==', currentUser.email)
-          );
-          
-          const eksisterendeRapporter = await getDocs(rapportQuery);
-          
-          // Last opp fil til Firebase Storage
-          const storageRef = ref(storage, `rapporter/${currentUser.uid}/${Date.now()}-${filnavn}`);
-          await uploadBytes(storageRef, blob);
-          const downloadURL = await getDownloadURL(storageRef);
-          
-          if (!eksisterendeRapporter.empty) {
-            // Oppdater eksisterende rapport
-            const eksisterendeRapport = eksisterendeRapporter.docs[0];
-            await updateDoc(firestoreDoc(db, 'rapporter', eksisterendeRapport.id), {
+      try {
+        const authInstance = getAuthInstance();
+        const dbInstance = getDbInstance();
+        const storageInstance = getStorageInstance();
+        const currentUser = authInstance.currentUser;
+        
+        if (currentUser) {
+          try {
+            // Sjekk om det allerede finnes en rapport med samme metadata
+            const rapportTittel = rapportData.tittel || 'Uten tittel';
+            const rapportQuery = query(
+              collection(dbInstance, 'rapporter'),
+              where('tittel', '==', rapportTittel),
+              where('testdato', '==', rapportData.testdato),
+              where('testUrl', '==', rapportData.testUrl),
+              where('testetAv', '==', rapportData.testetAv),
+              where('opprettetAv', '==', currentUser.email)
+            );
+            
+            const eksisterendeRapporter = await getDocs(rapportQuery);
+            
+            // Last opp fil til Firebase Storage
+            const storageRef = ref(storageInstance, `rapporter/${currentUser.uid}/${Date.now()}-${filnavn}`);
+            await uploadBytes(storageRef, blob);
+            const downloadURL = await getDownloadURL(storageRef);
+            
+            if (!eksisterendeRapporter.empty) {
+              // Oppdater eksisterende rapport
+              const eksisterendeRapport = eksisterendeRapporter.docs[0];
+              await updateDoc(firestoreDoc(dbInstance, 'rapporter', eksisterendeRapport.id), {
               versjon: rapportData.versjon,
               kommentar: rapportData.kommentar,
               antallBrudd: rapportData.wcagBrudd.length,
@@ -1729,7 +1734,7 @@ export default function RapportGenerator(): React.JSX.Element {
             const gammelFilUrl = eksisterendeRapport.data().filUrl;
             if (gammelFilUrl && gammelFilUrl !== downloadURL) {
               try {
-                const gammelFilRef = ref(storage, gammelFilUrl);
+                const gammelFilRef = ref(storageInstance, gammelFilUrl);
                 await deleteObject(gammelFilRef);
               } catch (deleteError) {
                 console.warn('Kunne ikke slette gammel fil:', deleteError);
@@ -1740,7 +1745,7 @@ export default function RapportGenerator(): React.JSX.Element {
             alert('Rapport eksportert og oppdatert i arkivet!');
           } else {
             // Lag ny rapport
-            await addDoc(collection(db, 'rapporter'), {
+            await addDoc(collection(dbInstance, 'rapporter'), {
               tittel: rapportTittel,
               testdato: rapportData.testdato,
               testetAv: rapportData.testetAv,
@@ -1759,14 +1764,18 @@ export default function RapportGenerator(): React.JSX.Element {
             
             alert('Rapport eksportert og lagret i arkivet!');
           }
-        } catch (firebaseError) {
-          console.error('Feil ved opplasting til Firebase:', firebaseError);
-          // Fortsett selv om Firebase-opplasting feiler
-          alert('Rapport eksportert lokalt, men kunne ikke lagre i arkivet. Se konsollen for detaljer.');
+          } catch (firebaseError) {
+            console.error('Feil ved opplasting til Firebase:', firebaseError);
+            // Fortsett selv om Firebase-opplasting feiler
+            alert('Rapport eksportert lokalt, men kunne ikke lagre i arkivet. Se konsollen for detaljer.');
+          }
+        } else {
+          // Bruker er ikke logget inn - vis melding om at filen er lastet ned lokalt
+          alert('Rapport eksportert lokalt. Logg inn for å lagre i arkivet.');
         }
-      } else {
-        // Bruker er ikke logget inn - vis melding om at filen er lastet ned lokalt
-        alert('Rapport eksportert lokalt. Logg inn for å lagre i arkivet.');
+      } catch (error) {
+        console.error('Feil ved Firebase-oppsett:', error);
+        // Fortsett selv om Firebase-oppsett feiler
       }
     } catch (error) {
       console.error('Feil ved Word-eksport:', error);

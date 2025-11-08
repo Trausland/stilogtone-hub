@@ -331,7 +331,19 @@ function SearchResults({ query }: { query: string }) {
   
   if (!results) return null;
   
-  const categories = Object.keys(results);
+  // Sorter kategorier: "Stil og tone" først, "Storybook" sist
+  const categories = Object.keys(results).sort((a, b) => {
+    // "Stil og tone" skal alltid komme først
+    if (a === 'Stil og tone' && b !== 'Stil og tone') return -1;
+    if (b === 'Stil og tone' && a !== 'Stil og tone') return 1;
+    
+    // "Storybook" skal alltid komme sist
+    if (a === 'Storybook' && b !== 'Storybook') return 1;
+    if (b === 'Storybook' && a !== 'Storybook') return -1;
+    
+    // For andre kategorier, behold alfabetisk rekkefølge
+    return a.localeCompare(b);
+  });
   
   return (
     <div style={searchResultsStyle}>

@@ -337,21 +337,22 @@ function buildHierarchy(url) {
   return { parent: parentCategory, parentUrl };
 }
 
-// Fetch Storybook components
+// Fetch Storybook components and other content
 async function fetchStorybookComponents() {
-  const components = [];
+  const items = [];
   
-  // Common component names - in production, you'd fetch this from Storybook API
+  // Komponenter
   const componentNames = [
     'Alert', 'Button', 'TextField', 'StepList', 'Card', 'Modal', 'Panel',
     'Checkbox', 'Select', 'TextArea', 'DatePicker', 'FileUploader',
     'ErrorMessage', 'ErrorSummary', 'Breadcrumbs', 'Pagination', 'Tabs',
     'Table', 'Accordion', 'Link', 'Icon', 'Spinner', 'Tag', 'Chips',
+    'WordInfo',
   ];
   
   for (const name of componentNames) {
     const slug = name.toLowerCase();
-    components.push({
+    items.push({
       title: name,
       url: `${STORYBOOK_BASE}/?path=/docs/komponenter-${slug}--docs`,
       category: 'Storybook',
@@ -360,7 +361,83 @@ async function fetchStorybookComponents() {
     });
   }
   
-  return components;
+  // Generelt
+  items.push({
+    title: 'Introduksjon',
+    url: `${STORYBOOK_BASE}/?path=/docs/generelt-introduksjon--docs`,
+    category: 'Storybook',
+    parent: 'Generelt',
+    level: 0,
+  });
+  
+  // Designtokens
+  const designTokenNames = [
+    'Breakpoints',
+    'Containers',
+    'Font',
+    'Hjelpestiler (SCSS)',
+    'Palette',
+    'Sizes',
+    'Spacing',
+  ];
+  
+  for (const name of designTokenNames) {
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '');
+    items.push({
+      title: name,
+      url: `${STORYBOOK_BASE}/?path=/docs/designtokens-${slug}--docs`,
+      category: 'Storybook',
+      parent: 'Designtokens',
+      level: 0,
+    });
+  }
+  
+  // Sidetyper - Ekstern
+  const eksternSidetyper = [
+    'Kvittering',
+    'Oppgaveliste (beta)',
+    'Repeterende felter',
+    'Skjema med steg',
+  ];
+  
+  for (const name of eksternSidetyper) {
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[()]/g, '');
+    items.push({
+      title: name,
+      url: `${STORYBOOK_BASE}/?path=/docs/sidetyper-ekstern-${slug}--docs`,
+      category: 'Storybook',
+      parent: 'Sidetyper • Ekstern',
+      level: 0,
+    });
+  }
+  
+  // Sidetyper - Intern
+  items.push({
+    title: 'Saksvisning',
+    url: `${STORYBOOK_BASE}/?path=/docs/sidetyper-intern-saksvisning--docs`,
+    category: 'Storybook',
+    parent: 'Sidetyper • Intern',
+    level: 0,
+  });
+  
+  // Verktøy
+  const verktoyNames = [
+    'Formatters',
+    'Kommandolinjeverktøy',
+  ];
+  
+  for (const name of verktoyNames) {
+    const slug = name.toLowerCase().replace(/\s+/g, '-');
+    items.push({
+      title: name,
+      url: `${STORYBOOK_BASE}/?path=/docs/verktoy-${slug}--docs`,
+      category: 'Storybook',
+      parent: 'Verktøy',
+      level: 0,
+    });
+  }
+  
+  return items;
 }
 
 const buildSearchIndex = async () => {

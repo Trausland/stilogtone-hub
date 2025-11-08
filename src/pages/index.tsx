@@ -219,6 +219,17 @@ function SearchResults({ query }: { query: string }) {
     return grouped;
   }, [query, searchIndex, indexLoaded]);
 
+  // Helper function to highlight search query in text
+  const highlightText = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, index) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <span key={index} style={{ color: '#005AA0', fontWeight: '600' }}>{part}</span>
+      ) : part
+    );
+  };
+
   const searchResultsStyle: React.CSSProperties = {
     position: 'absolute',
     zIndex: 50,
@@ -227,61 +238,53 @@ function SearchResults({ query }: { query: string }) {
     marginTop: '8px',
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    borderRadius: '8px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     maxHeight: '500px',
     overflowY: 'auto',
     padding: '8px',
   };
 
-  const sectionStyle: React.CSSProperties = {
-    padding: '4px 0',
-  };
-
-  const headerStyle: React.CSSProperties = {
-    padding: '10px 16px 8px 16px',
-    fontSize: '11px',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    color: '#475569',
-    letterSpacing: '0.1em',
-    backgroundColor: '#f8fafc',
-    borderRadius: '6px',
+  const sectionHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px 16px',
     marginBottom: '8px',
   };
 
-  // Lysegrønn styling for Storybook-kategorier og resultater
-  const storybookHeaderStyle: React.CSSProperties = {
-    ...headerStyle,
-    backgroundColor: '#f0fdf4',
+  const sectionHeaderIconStyle: React.CSSProperties = {
+    width: '20px',
+    height: '20px',
+    color: '#64748b',
   };
 
-  const linkStyle: React.CSSProperties = {
-    display: 'block',
+  const sectionHeaderTextStyle: React.CSSProperties = {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#0f172a',
+  };
+
+  const resultCardStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: '12px 16px',
-    textDecoration: 'none',
-    borderRadius: '6px',
-    transition: 'all 0.15s ease',
-    marginBottom: '4px',
-  };
-
-  const mainPageLinkStyle: React.CSSProperties = {
-    ...linkStyle,
     backgroundColor: '#f8fafc',
     border: '1px solid #e2e8f0',
-    padding: '14px 16px',
-    marginBottom: '6px',
+    borderRadius: '8px',
+    marginBottom: '8px',
+    textDecoration: 'none',
+    transition: 'all 0.15s ease',
+    cursor: 'pointer',
   };
 
-  const subPageLinkStyle: React.CSSProperties = {
-    ...linkStyle,
-    paddingLeft: '32px',
-    paddingTop: '8px',
-    paddingBottom: '8px',
-    backgroundColor: 'transparent',
+  const resultCardContentStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
   };
 
-  const titleStyle: React.CSSProperties = {
+  const resultTitleStyle: React.CSSProperties = {
     fontWeight: '600',
     color: '#0f172a',
     fontSize: '15px',
@@ -289,25 +292,28 @@ function SearchResults({ query }: { query: string }) {
     lineHeight: '1.4',
   };
 
-  const subTitleStyle: React.CSSProperties = {
-    fontWeight: '500',
-    color: '#475569',
-    fontSize: '13px',
-    marginBottom: '2px',
-    lineHeight: '1.4',
-  };
-
-  const categoryStyle: React.CSSProperties = {
+  const resultSubtitleStyle: React.CSSProperties = {
     fontSize: '12px',
     color: '#64748b',
-    marginTop: '2px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    lineHeight: '1.4',
+    textAlign: 'left',
   };
 
-  const mainPageCategoryStyle: React.CSSProperties = {
-    fontSize: '12px',
-    color: '#475569',
-    fontWeight: '500',
-    marginTop: '2px',
+  const arrowIconStyle: React.CSSProperties = {
+    width: '20px',
+    height: '20px',
+    color: '#3b82f6',
+    flexShrink: 0,
+  };
+
+  const subItemIconStyle: React.CSSProperties = {
+    width: '20px',
+    height: '20px',
+    color: '#64748b',
+    marginRight: '8px',
+    flexShrink: 0,
   };
 
   if (!results) return null;
@@ -329,136 +335,96 @@ function SearchResults({ query }: { query: string }) {
   
   return (
     <div style={searchResultsStyle}>
+      {/* Results by Category */}
       {categories.map((category, catIdx) => (
-        <div 
-          key={category} 
-          style={{ 
-            ...sectionStyle, 
-            ...(catIdx > 0 ? { marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' } : {})
-          }}
-        >
-          {(() => {
-            // Sjekk om kategorien er Storybook
-            const isStorybookCategory = category === 'STORYBOOK' || category.toLowerCase().includes('storybook');
-            return (
-              <div style={isStorybookCategory ? storybookHeaderStyle : headerStyle}>{category}</div>
-            );
-          })()}
+        <div key={category} style={catIdx > 0 ? { marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' } : {}}>
+          {/* Category Header */}
+          <div style={sectionHeaderStyle}>
+            {(() => {
+              const isStorybookCategory = category === 'STORYBOOK' || category.toLowerCase().includes('storybook');
+              if (isStorybookCategory) {
+                return (
+                  <svg viewBox="-31.5 0 319 319" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid" style={sectionHeaderIconStyle}>
+                    <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                    <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
+                    <g id="SVGRepo_iconCarrier">
+                      <defs>
+                        <path d="M9.87245893,293.324145 L0.0114611411,30.5732167 C-0.314208957,21.8955842 6.33948896,14.5413918 15.0063196,13.9997149 L238.494389,0.0317105427 C247.316188,-0.519651867 254.914637,6.18486163 255.466,15.0066607 C255.486773,15.339032 255.497167,15.6719708 255.497167,16.0049907 L255.497167,302.318596 C255.497167,311.157608 248.331732,318.323043 239.492719,318.323043 C239.253266,318.323043 239.013844,318.317669 238.774632,318.306926 L25.1475605,308.712253 C16.8276309,308.338578 10.1847994,301.646603 9.87245893,293.324145 L9.87245893,293.324145 Z" id="path-1"></path>
+                      </defs>
+                      <g>
+                        <mask id="mask-2" fill="white">
+                          <use xlinkHref="#path-1"></use>
+                        </mask>
+                        <use fill="#FF4785" fillRule="nonzero" xlinkHref="#path-1"></use>
+                        <path d="M188.665358,39.126973 L190.191903,2.41148534 L220.883535,0 L222.205755,37.8634126 C222.251771,39.1811466 221.22084,40.2866846 219.903106,40.3327009 C219.338869,40.3524045 218.785907,40.1715096 218.342409,39.8221376 L206.506729,30.4984116 L192.493574,41.1282444 C191.443077,41.9251106 189.945493,41.7195021 189.148627,40.6690048 C188.813185,40.2267976 188.6423,39.6815326 188.665358,39.126973 Z M149.413703,119.980309 C149.413703,126.206975 191.355678,123.222696 196.986019,118.848893 C196.986019,76.4467826 174.234041,54.1651411 132.57133,54.1651411 C90.9086182,54.1651411 67.5656805,76.7934542 67.5656805,110.735941 C67.5656805,169.85244 147.345341,170.983856 147.345341,203.229219 C147.345341,212.280549 142.913138,217.654777 133.162291,217.654777 C120.456641,217.654777 115.433477,211.165914 116.024438,189.103298 C116.024438,184.317101 67.5656805,182.824962 66.0882793,189.103298 C62.3262146,242.56887 95.6363019,257.990394 133.753251,257.990394 C170.688279,257.990394 199.645341,238.303123 199.645341,202.663511 C199.645341,139.304202 118.683759,141.001326 118.683759,109.604526 C118.683759,96.8760922 128.139127,95.178968 133.753251,95.178968 C139.662855,95.178968 150.300143,96.2205679 149.413703,119.980309 Z" fill="#FFFFFF" fillRule="nonzero" mask="url(#mask-2)"></path>
+                      </g>
+                    </g>
+                  </svg>
+                );
+              } else {
+                return (
+                  <svg xmlns="http://www.w3.org/2000/svg" enableBackground="new 0 0 24 24" height="24" style={sectionHeaderIconStyle} viewBox="0 0 24 24" width="24">
+                    <g>
+                      <rect fill="none" height="24" width="24"/>
+                    </g>
+                    <g fill="rgb(111, 44, 63)">
+                      <path d="M21,5c-1.11-0.35-2.33-0.5-3.5-0.5c-1.95,0-4.05,0.4-5.5,1.5c-1.45-1.1-3.55-1.5-5.5-1.5S2.45,4.9,1,6v14.65 c0,0.25,0.25,0.5,0.5,0.5c0.1,0,0.15-0.05,0.25-0.05C3.1,20.45,5.05,20,6.5,20c1.95,0,4.05,0.4,5.5,1.5c1.35-0.85,3.8-1.5,5.5-1.5 c1.65,0,3.35,0.3,4.75,1.05c0.1,0.05,0.15,0.05,0.25,0.05c0.25,0,0.5-0.25,0.5-0.5V6C22.4,5.55,21.75,5.25,21,5z M21,18.5 c-1.1-0.35-2.3-0.5-3.5-0.5c-1.7,0-4.15,0.65-5.5,1.5V8c1.35-0.85,3.8-1.5,5.5-1.5c1.2,0,2.4,0.15,3.5,0.5V18.5z"/>
+                      <path d="M17.5,10.5c0.88,0,1.73,0.09,2.5,0.26V9.24C19.21,9.09,18.36,9,17.5,9c-1.7,0-3.24,0.29-4.5,0.83v1.66 C14.13,10.85,15.7,10.5,17.5,10.5z"/>
+                      <path d="M13,12.49v1.66c1.13-0.64,2.7-0.99,4.5-0.99c0.88,0,1.73,0.09,2.5,0.26V11.9c-0.79-0.15-1.64-0.24-2.5-0.24 C15.8,11.66,14.26,11.96,13,12.49z"/>
+                      <path d="M17.5,14.33c-1.7,0-3.24,0.29-4.5,0.83v1.66c1.13-0.64,2.7-0.99,4.5-0.99c0.88,0,1.73,0.09,2.5,0.26v-1.52 C19.21,14.41,18.36,14.33,17.5,14.33z"/>
+                    </g>
+                  </svg>
+                );
+              }
+            })()}
+            <span style={sectionHeaderTextStyle}>{category}</span>
+          </div>
+
+          {/* Category Results */}
           {results[category].map((result, idx) => {
-            const isMainPage = (result.level || 0) === 0;
-            const isSubPage = !isMainPage;
-            // Sjekk om resultatet kommer fra Storybook
-            const isStorybook = result.url && (result.url.includes('skatteetaten.github.io/designsystemet') || result.url.includes('storybook'));
-            const isStorybookCategory = category === 'STORYBOOK' || category.toLowerCase().includes('storybook');
-            
-            // Sjekk om dette er første eller siste element i en gruppe
-            const prevResult = idx > 0 ? results[category][idx - 1] : null;
-            const nextResult = idx < results[category].length - 1 ? results[category][idx + 1] : null;
-            const isFirstInGroup = isMainPage || (isSubPage && prevResult && (prevResult.level || 0) === 0);
-            const isLastInGroup = isSubPage && (!nextResult || (nextResult.level || 0) === 0);
-            
-            // Bestem om dette er en del av en gruppe med underoverskrifter
-            const hasSubPages = isMainPage && nextResult && (nextResult.level || 0) > 0 && nextResult.parentUrl === result.url;
-            
-            // Lysegrønn bakgrunnsfarge og border for Storybook-resultater
-            const storybookBgColor = (isStorybook || isStorybookCategory) ? '#f0fdf4' : (isMainPage ? '#f8fafc' : 'transparent');
-            const storybookHoverBgColor = (isStorybook || isStorybookCategory) ? '#dcfce7' : (isMainPage ? '#f1f5f9' : '#f8fafc');
-            const storybookBorderColor = (isStorybook || isStorybookCategory) ? '#bbf7d0' : '#e2e8f0';
-            const storybookHoverBorderColor = (isStorybook || isStorybookCategory) ? '#86efac' : '#cbd5e1';
+            const isSubPage = (result.level || 0) > 0;
+            const subtitle = result.parent || result.heading || category;
             
             return (
-              <div
-                key={idx}
-                style={{
-                  ...(hasSubPages ? {
-                    backgroundColor: '#f8fafc',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    padding: '4px',
-                    marginBottom: '12px',
-                  } : {}),
-                  ...(isSubPage && !hasSubPages ? {
-                    marginBottom: '4px',
-                  } : {}),
+              <a
+                key={`${result.url}-${idx}`}
+                href={result.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={resultCardStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f1f5f9';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
                 }}
               >
-                <a
-                  href={result.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    ...(isMainPage ? mainPageLinkStyle : subPageLinkStyle),
-                    backgroundColor: storybookBgColor,
-                    ...(isMainPage && isStorybook ? { borderColor: storybookBorderColor } : {}),
-                    ...(isSubPage ? {
-                      paddingLeft: '48px', // Økt innrykk for underoverskrifter
-                      borderLeft: '3px solid #cbd5e1', // Tydeligere vertikal linje
-                      marginLeft: '12px', // Mer margin for å skape visuell gruppering
-                      backgroundColor: '#fafbfc', // Subtil bakgrunnsfarge for underoverskrifter
-                      borderRadius: '6px',
-                    } : {}),
-                    ...(isLastInGroup ? {
-                      marginBottom: '6px', // Spacing etter siste underoverskrift
-                    } : {}),
-                    ...(isFirstInGroup && isSubPage ? {
-                      marginTop: '6px', // Spacing før første underoverskrift
-                    } : {}),
-                    ...(hasSubPages && isMainPage ? {
-                      marginBottom: '0px', // Ingen margin når det er en gruppe
-                    } : {}),
-                  }}
-                  onMouseEnter={(e) => { 
-                    if (isMainPage) {
-                      e.currentTarget.style.backgroundColor = storybookHoverBgColor;
-                      e.currentTarget.style.borderColor = storybookHoverBorderColor;
-                    } else {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                      e.currentTarget.style.borderLeftColor = '#64748b'; // Mørkere linje ved hover
-                    }
-                  }}
-                  onMouseLeave={(e) => { 
-                    if (isMainPage) {
-                      e.currentTarget.style.backgroundColor = storybookBgColor;
-                      e.currentTarget.style.borderColor = storybookBorderColor;
-                    } else {
-                      e.currentTarget.style.backgroundColor = '#fafbfc';
-                      e.currentTarget.style.borderLeftColor = '#cbd5e1'; // Tilbake til normal farge
-                    }
-                  }}
-                >
-                <div style={isMainPage ? titleStyle : subTitleStyle}>
-                  {isSubPage && (
-                    <span style={{ 
-                      display: 'inline-block', 
-                      width: '16px', 
-                      marginRight: '6px',
-                      color: '#94a3b8',
-                      fontSize: '14px',
-                      verticalAlign: 'middle',
-                    }}>▸</span>
-                  )}
-                  {result.title}
-                </div>
-                {(result.parent || result.heading) && (
-                  <div style={{
-                    ...(isMainPage ? mainPageCategoryStyle : categoryStyle),
-                    fontSize: '11px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginTop: '4px',
-                  }}>
-                    {result.parent && (
-                      <span style={{ color: '#64748b' }}>{result.parent}</span>
+                <div style={resultCardContentStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+                    {isSubPage && (
+                      <svg xmlns="http://www.w3.org/2000/svg" style={subItemIconStyle} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8 7v7h8" />
+                        <path d="M14 10l3 3-3 3" />
+                      </svg>
                     )}
-                    {!result.parent && result.heading && (
-                      <span style={{ color: '#475569', fontStyle: 'normal', textTransform: 'none', fontWeight: '500' }}>
-                        {result.heading}
-                      </span>
-                    )}
+                    <div style={resultTitleStyle}>
+                      {highlightText(result.title, query)}
+                    </div>
                   </div>
-                )}
-                </a>
-              </div>
+                  {subtitle && (
+                    <div style={{ paddingLeft: isSubPage ? '28px' : '0' }}>
+                      <div style={resultSubtitleStyle}>
+                        {subtitle}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <svg style={arrowIconStyle} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </a>
             );
           })}
         </div>
@@ -543,6 +509,16 @@ export default function Home(): React.JSX.Element {
             </p>
             
             {/* Search */}
+            <style>{`
+              input[type="search"]::-webkit-search-cancel-button {
+                -webkit-appearance: none;
+                appearance: none;
+                display: none;
+              }
+              input[type="search"]::-ms-clear {
+                display: none;
+              }
+            `}</style>
             <div 
               ref={searchRef}
               style={{
@@ -553,55 +529,90 @@ export default function Home(): React.JSX.Element {
                 marginBottom: '64px',
               }}
             >
-              <input
-                type="search"
-                placeholder="Skriv her"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (e.target.value) {
-                    setIsSearchOpen(true);
-                  }
-                }}
-                onClick={() => {
-                  if (searchQuery) {
-                    setIsSearchOpen(true);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '16px 20px 16px 48px',
-                  borderRadius: '12px',
-                  border: '3px solid #475569',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  backgroundColor: '#ffffff',
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'%3E%3Ccircle cx=\'11\' cy=\'11\' r=\'8\'/%3E%3Cpath d=\'m21 21-4.35-4.35\'/%3E%3C/svg%3E")',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: '16px center',
-                  backgroundSize: '20px',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#3b82f6';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.15)';
-                  if (searchQuery) {
-                    setIsSearchOpen(true);
-                  }
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#475569';
-                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setIsSearchOpen(false);
-                  }
-                }}
-              />
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type="search"
+                  placeholder="Skriv her"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value) {
+                      setIsSearchOpen(true);
+                    }
+                  }}
+                  onClick={() => {
+                    if (searchQuery) {
+                      setIsSearchOpen(true);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '16px 44px 16px 48px',
+                    borderRadius: '8px',
+                    border: '1px solid #3b82f6',
+                    boxShadow: 'none',
+                    fontSize: '16px',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: '#ffffff',
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'%3E%3Ccircle cx=\'11\' cy=\'11\' r=\'8\'/%3E%3Cpath d=\'m21 21-4.35-4.35\'/%3E%3C/svg%3E")',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: '16px center',
+                    backgroundSize: '20px',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                    if (searchQuery) {
+                      setIsSearchOpen(true);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsSearchOpen(false);
+                    }
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSearchQuery('');
+                      setIsSearchOpen(false);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#64748b',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#475569';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#64748b';
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                )}
+              </div>
               {isSearchOpen && searchQuery && (
                 <SearchResults query={searchQuery} />
               )}

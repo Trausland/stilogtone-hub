@@ -1,4 +1,4 @@
-import React, { useState, type ReactElement } from 'react';
+import React, { useState, useRef, useEffect, type ReactElement } from 'react';
 import Layout from '@theme/Layout';
 import '@skatteetaten/ds-core-designtokens/index.css';
 import { TextField, TextArea, Checkbox, Select, DatePicker, FileUploader, ErrorMessage, ErrorSummary } from '@skatteetaten/ds-forms';
@@ -14,7 +14,7 @@ import { Alert, Tag } from '@skatteetaten/ds-status';
 import { Table } from '@skatteetaten/ds-table';
 import { Paragraph } from '@skatteetaten/ds-typography';
 
-type GenResult = { jsx: ReactElement | null; code: string };
+type GenResult = { jsx: ReactElement | null; code: string; topBanner: ReactElement | null };
 
 // Props-definisjoner
 type PropType = 'string' | 'boolean' | 'enum' | 'number' | 'reactnode';
@@ -26,6 +26,7 @@ type PropDefinition = {
   defaultValue?: any;
   description?: string;
   enumValues?: string[]; // For enum-typer
+  displayName?: string; // Norsk visningsnavn
 };
 
 type ComponentProps = Record<string, any>;
@@ -47,11 +48,14 @@ const componentPropsDefinitions: Record<string, PropDefinition[]> = {
     { name: 'disabled', type: 'boolean', description: 'Om knappen skal være deaktivert', defaultValue: false },
   ],
   TextField: [
-    { name: 'label', type: 'string', required: true, description: 'Feltets label', defaultValue: 'Fornavn' },
-    { name: 'description', type: 'string', description: 'Beskrivelse av feltet', defaultValue: '' },
-    { name: 'errorMessage', type: 'string', description: 'Feilmelding', defaultValue: '' },
-    { name: 'required', type: 'boolean', description: 'Om feltet er påkrevd', defaultValue: false },
-    { name: 'disabled', type: 'boolean', description: 'Om feltet skal være deaktivert', defaultValue: false },
+    { name: 'label', type: 'string', required: true, description: 'Feltets label', defaultValue: 'Fornavn', displayName: 'Ledetekst' },
+    { name: 'description', type: 'string', description: 'Beskrivelse av feltet', defaultValue: '', displayName: 'Beskrivelse' },
+    { name: 'showHelpText', type: 'boolean', description: 'Legg til hjelp-knapp', defaultValue: false, displayName: 'Hjelp-knapp' },
+    { name: 'helpText', type: 'string', description: 'Hjelpetekst', defaultValue: '', displayName: 'Hjelpetekst' },
+    { name: 'showErrorMessage', type: 'boolean', description: 'Vis feilmelding', defaultValue: false, displayName: 'Feilmelding' },
+    { name: 'errorMessage', type: 'string', description: 'Feilmelding', defaultValue: '', displayName: 'Feilmelding' },
+    { name: 'required', type: 'boolean', description: 'Om feltet er påkrevd', defaultValue: true, displayName: 'Påkrevd' },
+    { name: 'disabled', type: 'boolean', description: 'Om feltet skal være deaktivert', defaultValue: false, displayName: 'Deaktivert' },
   ],
   Alert: [
     { name: 'showAlert', type: 'boolean', required: true, description: 'Om Alert skal vises', defaultValue: true },
@@ -187,9 +191,22 @@ function createComponent(name: string, index: number, props?: ComponentProps): {
     const inputProps = props || {};
     const label = inputProps.label || 'Fornavn';
     const description = inputProps.description || '';
-    const errorMessage = inputProps.errorMessage || '';
-    const required = inputProps.required || false;
+    const showHelpText = inputProps.showHelpText || false;
+    const showErrorMessage = inputProps.showErrorMessage || false;
+    const required = inputProps.required !== undefined ? inputProps.required : true;
     const disabled = inputProps.disabled || false;
+    
+    // Generer standard hjelpetekst basert på label hvis showHelpText er true og helpText ikke er satt
+    let helpText = inputProps.helpText || '';
+    if (showHelpText && !helpText) {
+      helpText = `${label} er det første navnet ditt og kun det. Ikke inkluder mellomnavn.`;
+    }
+    
+    // Generer standard feilmelding basert på label hvis showErrorMessage er true og errorMessage ikke er satt
+    let errorMessage = inputProps.errorMessage || '';
+    if (showErrorMessage && !errorMessage) {
+      errorMessage = `${label} må fylles ut.`;
+    }
     
     // Bygg props-objekt for TextField
     const textFieldProps: any = {
@@ -198,12 +215,24 @@ function createComponent(name: string, index: number, props?: ComponentProps): {
     
     // Legg til valgfrie props hvis de er satt
     if (description) textFieldProps.description = description;
-    if (errorMessage) textFieldProps.errorMessage = errorMessage;
+    if (showHelpText && helpText) textFieldProps.helpText = helpText;
+    if (showErrorMessage && errorMessage) textFieldProps.errorMessage = errorMessage;
     if (required) textFieldProps.required = required;
     if (disabled) textFieldProps.disabled = disabled;
     
-    // Generer kode med props
-    const propsString = Object.entries(inputProps)
+    // Generer kode med props - inkluder helpText og errorMessage hvis de er aktive
+    const propsForCode = { ...inputProps };
+    if (showHelpText && helpText) {
+      propsForCode.helpText = helpText;
+    }
+    if (showErrorMessage && errorMessage) {
+      propsForCode.errorMessage = errorMessage;
+    }
+    // Fjern showHelpText og showErrorMessage fra koden siden de ikke er props for TextField
+    delete propsForCode.showHelpText;
+    delete propsForCode.showErrorMessage;
+    
+    const propsString = Object.entries(propsForCode)
       .filter(([key, value]) => {
         if (value === undefined || value === null || value === '') return false;
         if (key === 'required' && value === false) return false;
@@ -805,16 +834,51 @@ function PropsPanel({
   if (definitions.length === 0) return null;
   
   const updateProp = (propName: string, value: any) => {
-    onPropsChange({ ...props, [propName]: value });
+    const newProps = { ...props, [propName]: value };
+    
+    // Hvis showHelpText settes til true, sett standard hjelpetekst hvis helpText ikke er satt
+    if (componentName === 'TextField' && propName === 'showHelpText' && value === true) {
+      const label = props.label || 'Fornavn';
+      if (!props.helpText || props.helpText === '') {
+        newProps.helpText = `${label} er det første navnet ditt og kun det. Ikke inkluder mellomnavn.`;
+      }
+    }
+    
+    // Hvis label endres og showHelpText er true, oppdater helpText hvis den er standardteksten
+    if (componentName === 'TextField' && propName === 'label' && props.showHelpText) {
+      const oldLabel = props.label || 'Fornavn';
+      const oldHelpText = props.helpText || '';
+      if (oldHelpText === `${oldLabel} er det første navnet ditt og kun det. Ikke inkluder mellomnavn.` || oldHelpText === '') {
+        newProps.helpText = `${value} er det første navnet ditt og kun det. Ikke inkluder mellomnavn.`;
+      }
+    }
+    
+    // Hvis showErrorMessage settes til true, sett standard feilmelding hvis errorMessage ikke er satt
+    if (componentName === 'TextField' && propName === 'showErrorMessage' && value === true) {
+      const label = props.label || 'Fornavn';
+      if (!props.errorMessage || props.errorMessage === '') {
+        newProps.errorMessage = `${label} må fylles ut.`;
+      }
+    }
+    
+    // Hvis label endres og showErrorMessage er true, oppdater errorMessage hvis den er standardteksten
+    if (componentName === 'TextField' && propName === 'label' && props.showErrorMessage) {
+      const oldLabel = props.label || 'Fornavn';
+      const oldErrorMessage = props.errorMessage || '';
+      if (oldErrorMessage === `${oldLabel} må fylles ut.` || oldErrorMessage === '') {
+        newProps.errorMessage = `${value} må fylles ut.`;
+      }
+    }
+    
+    onPropsChange(newProps);
   };
   
   // Bygg tittel med nummerering hvis det er flere instanser
-  let title = `Props for ${componentName}`;
+  let title = `${componentName}`;
   if (totalInstances && totalInstances > 1) {
     title += ` #${instanceNumber}`;
-  }
-  if (lineNumber !== undefined) {
-    title += ` (linje ${lineNumber + 1})`;
+  } else if (totalInstances === 1) {
+    title += ` #1`;
   }
   
   return (
@@ -848,45 +912,94 @@ function PropsPanel({
       {isOpen && (
         <div style={{ padding: 16, backgroundColor: '#ffffff' }}>
           {definitions.map((prop) => {
+            // Skjul helpText-feltet hvis showHelpText er false
+            if (componentName === 'TextField' && prop.name === 'helpText') {
+              const showHelpText = props.showHelpText !== undefined ? props.showHelpText : false;
+              if (!showHelpText) {
+                return null;
+              }
+            }
+            
+            // Skjul errorMessage-feltet hvis showErrorMessage er false
+            if (componentName === 'TextField' && prop.name === 'errorMessage') {
+              const showErrorMessage = props.showErrorMessage !== undefined ? props.showErrorMessage : false;
+              if (!showErrorMessage) {
+                return null;
+              }
+            }
+            
             const currentValue = props[prop.name] !== undefined ? props[prop.name] : prop.defaultValue;
             
             return (
               <div key={prop.name} style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 13 }}>
-                  {prop.name}
+                  {prop.displayName || prop.name}
                   {prop.required && <span style={{ color: '#dc2626', marginLeft: 4 }}>*</span>}
+                  {prop.displayName && <span style={{ color: '#64748b', marginLeft: 4, fontWeight: 400, fontSize: 11 }}>({prop.name})</span>}
                 </label>
-                {prop.description && (
-                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>
-                    {prop.description}
-                  </div>
-                )}
                 
                 {prop.type === 'string' && (
-                  <input
-                    type="text"
-                    value={currentValue || ''}
-                    onChange={(e) => updateProp(prop.name, e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      border: '1px solid #ccc',
-                      borderRadius: 4,
-                      fontSize: 13
-                    }}
-                  />
+                  <>
+                    {prop.name === 'errorMessage' || prop.name === 'description' || prop.name === 'helpText' ? (
+                      <textarea
+                        value={currentValue || ''}
+                        onChange={(e) => updateProp(prop.name, e.target.value)}
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          border: '1px solid #ccc',
+                          borderRadius: 4,
+                          fontSize: 13,
+                          fontFamily: 'inherit',
+                          resize: 'vertical'
+                        }}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={currentValue || ''}
+                        onChange={(e) => updateProp(prop.name, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          border: '1px solid #ccc',
+                          borderRadius: 4,
+                          fontSize: 13
+                        }}
+                      />
+                    )}
+                  </>
                 )}
                 
                 {prop.type === 'boolean' && (
-                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={currentValue || false}
-                      onChange={(e) => updateProp(prop.name, e.target.checked)}
-                      style={{ marginRight: 8 }}
+                  <div
+                    onClick={() => updateProp(prop.name, !currentValue)}
+                    style={{
+                      position: 'relative',
+                      width: 44,
+                      height: 24,
+                      borderRadius: 12,
+                      backgroundColor: currentValue ? '#3b82f6' : '#cbd5e1',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        left: currentValue ? 22 : 2,
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        backgroundColor: '#ffffff',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                      }}
                     />
-                    <span style={{ fontSize: 13 }}>{currentValue ? 'På' : 'Av'}</span>
-                  </label>
+                  </div>
                 )}
                 
                 {prop.type === 'enum' && prop.enumValues && (
@@ -948,10 +1061,12 @@ function generateFromPrompt(raw: string, componentPropsMap?: Record<number, Comp
   const jsxParts: ReactElement[] = [];
   const codeParts: string[] = [];
   
-  // TopBannerExternal først (hvis den finnes)
+  // TopBannerExternal først (hvis den finnes) - separer ut
   const topBanner = layoutComponents.find(c => c.code.includes('TopBannerExternal'));
-  if (topBanner && topBanner.jsx) {
-    jsxParts.push(topBanner.jsx);
+  const topBannerJsx = topBanner && topBanner.jsx ? topBanner.jsx : null;
+  
+  // Legg TopBannerExternal til i kode (men ikke i jsx for preview)
+  if (topBanner && topBanner.code) {
     codeParts.push(topBanner.code);
   }
   
@@ -983,13 +1098,14 @@ function generateFromPrompt(raw: string, componentPropsMap?: Record<number, Comp
   const code = `<>\n${codeParts.join('\n')}\n</>`;
   const jsx = <>{jsxParts}</>;
   
-  return { jsx, code };
+  return { jsx, code, topBanner: topBannerJsx };
 }
 
 export default function Generator(): React.JSX.Element {
   const [prompt, setPrompt] = useState('');
   const [code, setCode] = useState('');
   const [component, setComponent] = useState<ReactElement | null>(null);
+  const [topBanner, setTopBanner] = useState<ReactElement | null>(null);
   const [copiedCodeBlock, setCopiedCodeBlock] = useState(false);
   // State for props per komponent (indexed by component index)
   const [componentPropsMap, setComponentPropsMap] = useState<Record<number, ComponentProps>>({});
@@ -997,6 +1113,46 @@ export default function Generator(): React.JSX.Element {
   const [componentNames, setComponentNames] = useState<Record<number, string>>({});
   // State for visningsbredde (standard eller mobil)
   const [viewWidth, setViewWidth] = useState<'standard' | 'mobile'>('standard');
+  // State for å utvide/minimere props-panelet
+  const [isPropsPanelExpanded, setIsPropsPanelExpanded] = useState(false);
+  // Ref for preview-containeren
+  const previewRef = useRef<HTMLDivElement>(null);
+  // Ref for egenskaper-knappen
+  const propsButtonRef = useRef<HTMLButtonElement>(null);
+  // State for props panelet sin posisjon
+  const [propsPanelLeft, setPropsPanelLeft] = useState<number>(0);
+  const [propsPanelTop, setPropsPanelTop] = useState<number>(150);
+
+  // Beregn posisjonen for props panelet basert på egenskaper-knappens posisjon
+  useEffect(() => {
+    const updatePosition = () => {
+      if (propsButtonRef.current) {
+        const rect = propsButtonRef.current.getBoundingClientRect();
+        // Plasser panelet slik at høyre side er kant i kant med knappens høyre side
+        setPropsPanelLeft(rect.right - 400); // 400px er bredden på panelet
+        setPropsPanelTop(rect.bottom + 8); // Plasser panelet rett under knappen med litt spacing
+      } else if (previewRef.current) {
+        // Fallback til preview-containeren hvis knappen ikke er funnet
+        const rect = previewRef.current.getBoundingClientRect();
+        setPropsPanelLeft(rect.left);
+        setPropsPanelTop(rect.top);
+      } else {
+        // Fallback-verdier hvis ingen ref er satt ennå
+        setPropsPanelLeft(0);
+        setPropsPanelTop(150);
+      }
+    };
+
+    // Kjør etter en liten delay for å sikre at DOM er klar
+    const timeoutId = setTimeout(updatePosition, 100);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, [code, viewWidth, isPropsPanelExpanded]);
 
   const handleGenerate = () => {
     const lines = prompt.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -1041,8 +1197,9 @@ export default function Generator(): React.JSX.Element {
     }
     setComponentPropsMap(newPropsMap);
     
-    const { jsx, code } = generateFromPrompt(prompt, newPropsMap);
+    const { jsx, code, topBanner: topBannerJsx } = generateFromPrompt(prompt, newPropsMap);
     setComponent(jsx);
+    setTopBanner(topBannerJsx);
     setCode(code);
     setCopiedCodeBlock(false);
   };
@@ -1095,41 +1252,6 @@ export default function Generator(): React.JSX.Element {
         {/* Resultat – også i .site */}
         {code && (
           <>
-            {/* Props Panel - vises før kode */}
-            {(() => {
-              // Tell hvor mange instanser av hver komponenttype
-              const componentCounts: Record<string, number> = {};
-              const componentInstances: Record<string, number> = {};
-              
-              Object.entries(componentNames).forEach(([index, componentName]) => {
-                if (componentPropsDefinitions[componentName]) {
-                  componentCounts[componentName] = (componentCounts[componentName] || 0) + 1;
-                }
-              });
-              
-              return Object.entries(componentNames).map(([index, componentName]) => {
-                if (componentPropsDefinitions[componentName]) {
-                  // Tell hvilken instans dette er
-                  componentInstances[componentName] = (componentInstances[componentName] || 0) + 1;
-                  const instanceNumber = componentInstances[componentName];
-                  const totalInstances = componentCounts[componentName];
-                  
-                  return (
-                    <PropsPanel
-                      key={index}
-                      componentName={componentName}
-                      props={componentPropsMap[parseInt(index)] || {}}
-                      onPropsChange={(props) => handlePropsChange(parseInt(index), props)}
-                      instanceNumber={instanceNumber}
-                      totalInstances={totalInstances}
-                      lineNumber={parseInt(index)}
-                    />
-                  );
-                }
-                return null;
-              });
-            })()}
-            
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ fontWeight: 600 }}>Generert kode</div>
               <Button onClick={copyCode} variant="secondary">
@@ -1153,6 +1275,7 @@ export default function Generator(): React.JSX.Element {
               {code}
             </pre>
 
+            {/* Forhåndsvisning og Props Panel wrapper */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ fontWeight: 600 }}>Forhåndsvisning</div>
@@ -1179,27 +1302,134 @@ export default function Generator(): React.JSX.Element {
                     />
                     <span>Mobil (320px)</span>
                   </label>
+                  <button
+                    ref={propsButtonRef}
+                    onClick={() => setIsPropsPanelExpanded(!isPropsPanelExpanded)}
+                    title={isPropsPanelExpanded ? 'Minimer egenskaper' : 'Vis egenskaper'}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      color: '#0f172a',
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: 500,
+                      whiteSpace: 'nowrap',
+                      transition: 'background-color 0.2s, border-color 0.2s',
+                      backgroundColor: isPropsPanelExpanded ? '#f0f4f8' : '#ffffff',
+                    }}
+                  >
+                    Egenskaper
+                    {isPropsPanelExpanded ? ' ▲' : ' ▼'}
+                  </button>
                 </div>
               </div>
-              <div 
-                className="generator-preview"
-                style={viewWidth === 'mobile' ? { 
-                  margin: '0 auto',
-                  width: 'fit-content'
-                } : {}}
-              >
+              <div>
                 <div 
-                  className={viewWidth === 'mobile' ? 'generator-preview-mobile-wrapper' : ''}
+                  className="generator-preview"
                   style={viewWidth === 'mobile' ? { 
-                    maxWidth: '320px',
-                    width: '320px',
-                    boxSizing: 'border-box'
+                    margin: '0 auto',
+                    width: 'fit-content'
                   } : {}}
                 >
-                  {component}
+                  {topBanner && topBanner}
+                  <div 
+                    className={viewWidth === 'mobile' ? 'generator-preview-mobile-wrapper' : ''}
+                    style={viewWidth === 'mobile' ? { 
+                      maxWidth: '320px',
+                      width: '320px',
+                      boxSizing: 'border-box',
+                      padding: '16px'
+                    } : {
+                      padding: '16px'
+                    }}
+                  >
+                    {component}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Props Panel - overlay som flyter over forhåndsvisningen, bruker fixed positioning for å ikke påvirke skip link-en */}
+            {code && isPropsPanelExpanded && (
+              <div style={{
+                position: 'fixed',
+                left: `${propsPanelLeft || 0}px`,
+                top: `${propsPanelTop || 150}px`,
+                bottom: '100px',
+                height: 'auto',
+                maxHeight: 'calc(100vh - 250px)',
+                minHeight: '400px',
+                width: '400px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e0e0e0',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transition: 'width 0.3s ease, left 0.3s ease, bottom 0.3s ease',
+                zIndex: 1000
+              }}>
+                {/* Header med tittel - knappen er flyttet til header-raden */}
+                <div style={{
+                  padding: '16px',
+                  borderBottom: '1px solid #e0e0e0',
+                  backgroundColor: '#f8f9fa',
+                  minHeight: '56px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  boxSizing: 'border-box'
+                }}>
+                  <div style={{ fontWeight: 600, fontSize: 16 }}>Egenskaper</div>
+                </div>
+                
+                {/* Scrollbart innhold */}
+                <div style={{
+                  overflowY: 'auto',
+                  flex: 1,
+                  padding: '16px'
+                }}>
+                    {(() => {
+                      // Tell hvor mange instanser av hver komponenttype
+                      const componentCounts: Record<string, number> = {};
+                      const componentInstances: Record<string, number> = {};
+                      
+                      Object.entries(componentNames).forEach(([index, componentName]) => {
+                        if (componentPropsDefinitions[componentName]) {
+                          componentCounts[componentName] = (componentCounts[componentName] || 0) + 1;
+                        }
+                      });
+                      
+                      return Object.entries(componentNames).map(([index, componentName]) => {
+                        if (componentPropsDefinitions[componentName]) {
+                          // Tell hvilken instans dette er
+                          componentInstances[componentName] = (componentInstances[componentName] || 0) + 1;
+                          const instanceNumber = componentInstances[componentName];
+                          const totalInstances = componentCounts[componentName];
+                          
+                          return (
+                            <PropsPanel
+                              key={index}
+                              componentName={componentName}
+                              props={componentPropsMap[parseInt(index)] || {}}
+                              onPropsChange={(props) => handlePropsChange(parseInt(index), props)}
+                              instanceNumber={instanceNumber}
+                              totalInstances={totalInstances}
+                              lineNumber={parseInt(index)}
+                            />
+                          );
+                        }
+                        return null;
+                      });
+                    })()}
+                  </div>
+              </div>
+            )}
           </>
         )}
       </div>

@@ -136,6 +136,12 @@ const config: Config = {
       items: [
         {to: '/', label: 'Søk stil og tone', position: 'right'},
         {
+          href: 'https://skatteetaten.github.io/uu-status/uu-status.html',
+          label: 'UU-status Skatteetaten',
+          position: 'right',
+          target: '_blank',
+        },
+        {
           href: 'https://github.com/Skatteetaten/designsystemet/',
           label: 'GitHub',
           position: 'right',

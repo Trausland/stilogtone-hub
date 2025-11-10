@@ -62,7 +62,7 @@ function extractHeadings(html, baseUrl) {
   const h1 = $('h1').first().text().trim();
   
   // First, find all anchor links on the page that point to headings
-  // Store mapping of heading text to anchor ID
+  // Store mapping of heading text to anchor ID (prioritize semantic IDs)
   const headingToAnchorMap = new Map();
   
   // Find all links that point to headings (href="#id")
@@ -76,13 +76,26 @@ function extractHeadings(html, baseUrl) {
     const anchorId = href.substring(1); // Remove #
     allAnchorIds.add(anchorId);
     
+    // Check if this is a GUID-based ID
+    const isGuidBased = anchorId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+    
     // Find the heading this link is associated with
     // Could be a sibling, parent, or nearby heading
     const $heading = $link.closest('h2, h3, h4').first();
     if ($heading.length) {
       const headingText = $heading.text().trim();
       if (headingText) {
-        headingToAnchorMap.set(headingText, anchorId);
+        // Only set if no mapping exists, or if existing mapping is GUID-based and this is semantic
+        if (!headingToAnchorMap.has(headingText)) {
+          headingToAnchorMap.set(headingText, anchorId);
+        } else {
+          const existingId = headingToAnchorMap.get(headingText);
+          const existingIsGuid = existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+          // Replace GUID-based ID with semantic ID
+          if (existingIsGuid && !isGuidBased) {
+            headingToAnchorMap.set(headingText, anchorId);
+          }
+        }
       }
     } else {
       // Check if link is right before a heading
@@ -90,7 +103,17 @@ function extractHeadings(html, baseUrl) {
       if ($nextHeading.length) {
         const headingText = $nextHeading.text().trim();
         if (headingText) {
-          headingToAnchorMap.set(headingText, anchorId);
+          // Only set if no mapping exists, or if existing mapping is GUID-based and this is semantic
+          if (!headingToAnchorMap.has(headingText)) {
+            headingToAnchorMap.set(headingText, anchorId);
+          } else {
+            const existingId = headingToAnchorMap.get(headingText);
+            const existingIsGuid = existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+            // Replace GUID-based ID with semantic ID
+            if (existingIsGuid && !isGuidBased) {
+              headingToAnchorMap.set(headingText, anchorId);
+            }
+          }
         }
       }
     }
@@ -104,7 +127,17 @@ function extractHeadings(html, baseUrl) {
         const headingText = $heading.text().trim();
         // Match if link text is similar to heading text
         if (headingText && (headingText === linkText || headingText.includes(linkText) || linkText.includes(headingText))) {
-          headingToAnchorMap.set(headingText, anchorId);
+          // Only set if no mapping exists, or if existing mapping is GUID-based and this is semantic
+          if (!headingToAnchorMap.has(headingText)) {
+            headingToAnchorMap.set(headingText, anchorId);
+          } else {
+            const existingId = headingToAnchorMap.get(headingText);
+            const existingIsGuid = existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+            // Replace GUID-based ID with semantic ID
+            if (existingIsGuid && !isGuidBased) {
+              headingToAnchorMap.set(headingText, anchorId);
+            }
+          }
         }
       });
     }
@@ -117,6 +150,9 @@ function extractHeadings(html, baseUrl) {
     if (id) {
       allAnchorIds.add(id);
       
+      // Check if this is a GUID-based ID
+      const isGuidBased = id.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+      
       // Check if this element is a heading or associated with one
       const $heading = $elem.is('h2, h3, h4') ? $elem : $elem.closest('h2, h3, h4').first();
       if (!$heading.length && $elem.closest('a').length === 0) {
@@ -125,7 +161,17 @@ function extractHeadings(html, baseUrl) {
         if ($nearbyHeading.length) {
           const headingText = $nearbyHeading.text().trim();
           if (headingText) {
-            headingToAnchorMap.set(headingText, id);
+            // Only set if no mapping exists, or if existing mapping is GUID-based and this is semantic
+            if (!headingToAnchorMap.has(headingText)) {
+              headingToAnchorMap.set(headingText, id);
+            } else {
+              const existingId = headingToAnchorMap.get(headingText);
+              const existingIsGuid = existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+              // Replace GUID-based ID with semantic ID
+              if (existingIsGuid && !isGuidBased) {
+                headingToAnchorMap.set(headingText, id);
+              }
+            }
           }
         }
       }
@@ -135,64 +181,128 @@ function extractHeadings(html, baseUrl) {
   // Extract h2, h3, h4 as subheadings
   $('h2, h3, h4').each((i, elem) => {
     const $elem = $(elem);
-    const text = $elem.text().trim();
+    // Normalize text: trim and replace newlines/multiple spaces with single space
+    const text = $elem.text().trim().replace(/\s+/g, ' ').replace(/\n/g, ' ');
     if (!text) return;
     
-    // First, try to use existing ID attribute if present
-    let id = $elem.attr('id');
+    let id = null;
+    let guidBasedId = null; // Store GUID-based IDs separately
     
-    // If no ID exists, check if heading is wrapped in an anchor tag
+    // First, try to use existing ID attribute if present
+    const existingId = $elem.attr('id');
+    if (existingId) {
+      // Check if it's a GUID-based ID (starts with "ID-" followed by UUID pattern)
+      if (existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+        guidBasedId = existingId;
+      } else {
+        // It's a semantic ID, use it
+        id = existingId;
+      }
+    }
+    
+    // If no semantic ID exists, check if heading is wrapped in an anchor tag
     if (!id) {
       const $parentAnchor = $elem.closest('a[id]');
       if ($parentAnchor.length) {
-        id = $parentAnchor.attr('id');
+        const parentId = $parentAnchor.attr('id');
+        if (!parentId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+          id = parentId;
+        } else if (!guidBasedId) {
+          guidBasedId = parentId;
+        }
       }
     }
     
-    // If still no ID, check if there's an anchor tag before the heading
+    // If still no semantic ID, check if there's an anchor tag before the heading
     if (!id) {
       const $prevAnchor = $elem.prev('a[id]');
       if ($prevAnchor.length) {
-        id = $prevAnchor.attr('id');
+        const prevId = $prevAnchor.attr('id');
+        if (!prevId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+          id = prevId;
+        } else if (!guidBasedId) {
+          guidBasedId = prevId;
+        }
       }
     }
     
-    // If still no ID, check if there's an anchor tag that wraps or is near the heading
+    // If still no semantic ID, check if there's an anchor tag that wraps or is near the heading
     if (!id) {
       const $nearbyAnchor = $elem.siblings('a[id]').first();
       if ($nearbyAnchor.length) {
-        id = $nearbyAnchor.attr('id');
+        const nearbyId = $nearbyAnchor.attr('id');
+        if (!nearbyId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+          id = nearbyId;
+        } else if (!guidBasedId) {
+          guidBasedId = nearbyId;
+        }
       }
     }
     
-    // If still no ID, check our mapping from anchor links
-    if (!id && headingToAnchorMap.has(text)) {
-      id = headingToAnchorMap.get(text);
-    }
-    
-    // If still no ID, try to find anchor links that point to this heading
-    // by searching for links with href="#..." that match our generated ID
+    // If still no semantic ID, try to find elements with semantic IDs that match this heading
+    // First, check if an element with a semantic ID exists on the page
     if (!id) {
       const generatedId = text
         .toLowerCase()
+        .replace(/å/g, 'a')
+        .replace(/æ/g, 'ae')
+        .replace(/ø/g, 'o')
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .substring(0, 100);
       
-      // Check if any link on the page points to this ID
-      const $anchorLink = $(`a[href="#${generatedId}"]`);
-      if ($anchorLink.length) {
-        // Verify this link is associated with this heading
-        const $linkHeading = $anchorLink.closest('h2, h3, h4').first();
-        if (!$linkHeading.length) {
-          const $nextHeading = $anchorLink.next('h2, h3, h4').first();
-          if ($nextHeading.length && $nextHeading.text().trim() === text) {
+      // First, check if an element with this semantic ID exists on the page
+      const $targetElement = $(`#${generatedId}`);
+      if ($targetElement.length > 0) {
+        // Check if this element is the heading or associated with it
+        const $targetHeading = $targetElement.is('h2, h3, h4') ? $targetElement : $targetElement.closest('h2, h3, h4').first();
+        if ($targetHeading.length && $targetHeading.text().trim() === text) {
+          id = generatedId;
+        } else if (!$targetHeading.length) {
+          // Check if heading is nearby
+          const $nearbyHeading = $targetElement.prev('h2, h3, h4').first();
+          if ($nearbyHeading.length && $nearbyHeading.text().trim() === text) {
             id = generatedId;
           }
-        } else if ($linkHeading.text().trim() === text) {
-          id = generatedId;
         }
+      }
+      
+      // If still no ID, check if any link on the page points to this semantic ID
+      if (!id) {
+        const $anchorLink = $(`a[href="#${generatedId}"]`);
+        if ($anchorLink.length) {
+          // Verify this link is associated with this heading
+          const $linkHeading = $anchorLink.closest('h2, h3, h4').first();
+          if (!$linkHeading.length) {
+            const $nextHeading = $anchorLink.next('h2, h3, h4').first();
+            if ($nextHeading.length && $nextHeading.text().trim() === text) {
+              // Verify the ID actually exists on the page
+              if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
+                id = generatedId;
+              }
+            }
+          } else if ($linkHeading.text().trim() === text) {
+            // Verify the ID actually exists on the page
+            if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
+              id = generatedId;
+            }
+          }
+        }
+      }
+    }
+    
+    // If still no semantic ID, check our mapping from anchor links (prioritize semantic IDs)
+    if (!id && headingToAnchorMap.has(text)) {
+      const mappedId = headingToAnchorMap.get(text);
+      // Only use if it's not a GUID-based ID
+      if (!mappedId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+        // Verify the ID actually exists on the page
+        if (allAnchorIds.has(mappedId) || $(`#${mappedId}`).length > 0) {
+          id = mappedId;
+        }
+      } else if (!guidBasedId) {
+        guidBasedId = mappedId;
       }
     }
     
@@ -236,7 +346,14 @@ function extractHeadings(html, baseUrl) {
       if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
         id = generatedId;
       }
-      // If no ID exists, set to null - we won't include hash fragment in URL
+    }
+    
+    // Only use GUID-based ID as last resort if no semantic ID was found
+    if (!id && guidBasedId) {
+      // Verify GUID-based ID exists on the page
+      if (allAnchorIds.has(guidBasedId) || $(`#${guidBasedId}`).length > 0) {
+        id = guidBasedId;
+      }
     }
     
     const level = elem.tagName === 'h2' ? 1 : elem.tagName === 'h3' ? 2 : 3;

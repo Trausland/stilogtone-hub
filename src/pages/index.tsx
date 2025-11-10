@@ -282,6 +282,7 @@ function SearchResults({ query }: { query: string }) {
   const resultCardContentStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 0,
+    textAlign: 'left',
   };
 
   const resultTitleStyle: React.CSSProperties = {
@@ -290,6 +291,7 @@ function SearchResults({ query }: { query: string }) {
     fontSize: '15px',
     marginBottom: '4px',
     lineHeight: '1.4',
+    textAlign: 'left',
   };
 
   const resultSubtitleStyle: React.CSSProperties = {

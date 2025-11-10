@@ -8,6 +8,11 @@ dotenv.config();
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// Beregn baseUrl og full URL for bilder
+const baseUrl = process.env.NODE_ENV === 'production' ? '/stilogtone-hub/' : '/';
+const siteUrl = 'https://trausland.github.io';
+const fullImageUrl = `${siteUrl}${baseUrl}img/skatteetatenlogo.png`;
+
 const config: Config = {
   title: 'Søk stil og tone',
   tagline: 'Finn alt om komponenter, mønstre, stil og utvikling',
@@ -19,9 +24,9 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-   url: 'https://trausland.github.io',
+  url: siteUrl,
   // Bruk '/' i utvikling, '/stilogtone-hub/' i produksjon
-  baseUrl: process.env.NODE_ENV === 'production' ? '/stilogtone-hub/' : '/',
+  baseUrl: baseUrl,
 
 
   // GitHub pages deployment config.
@@ -111,7 +116,7 @@ const config: Config = {
       tagName: 'meta',
       attributes: {
         property: 'og:image',
-        content: 'https://trausland.github.io/stilogtone-hub/img/skatteetatenlogo.png',
+        content: fullImageUrl,
       },
     },
     {
@@ -126,7 +131,7 @@ const config: Config = {
       tagName: 'meta',
       attributes: {
         name: 'twitter:image',
-        content: 'https://trausland.github.io/stilogtone-hub/img/skatteetatenlogo.png',
+        content: fullImageUrl,
       },
     },
     {

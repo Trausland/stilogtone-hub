@@ -220,9 +220,9 @@ function extractHeadings(html, baseUrl) {
       }
     }
     
-    // Final fallback: generate ID from heading text
+    // Final fallback: generate ID from heading text, but only if it exists on the page
     if (!id) {
-      id = text
+      const generatedId = text
         .toLowerCase()
         .replace(/å/g, 'a')
         .replace(/æ/g, 'ae')
@@ -231,13 +231,22 @@ function extractHeadings(html, baseUrl) {
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .substring(0, 100);
+      
+      // Only use generated ID if an element with this ID actually exists on the page
+      if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
+        id = generatedId;
+      }
+      // If no ID exists, set to null - we won't include hash fragment in URL
     }
     
     const level = elem.tagName === 'h2' ? 1 : elem.tagName === 'h3' ? 2 : 3;
     
+    // Only include ID if it actually exists on the page
+    const verifiedId = id && (allAnchorIds.has(id) || $(`#${id}`).length > 0) ? id : null;
+    
     headings.push({
       title: text,
-      id: id,
+      id: verifiedId, // Only include ID if it exists on the page
       level: level,
     });
   });
@@ -536,9 +545,12 @@ const buildSearchIndex = async () => {
       // Build full breadcrumb path: category > page title
       const breadcrumb = page.parent ? `${page.parent} • ${page.title}` : page.title;
       
+      // Only include hash fragment if ID exists on the page
+      const url = heading.id ? `${page.url}#${heading.id}` : page.url;
+      
       flattenedIndex.push({
         title: heading.title,
-        url: `${page.url}#${heading.id}`,
+        url: url,
         category: page.category,
         parent: breadcrumb, // Full breadcrumb path instead of just page title
         parentUrl: page.url,

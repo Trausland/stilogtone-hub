@@ -106,6 +106,36 @@ const config: Config = {
         href: '/designsystem-hub/img/skatteetatenlogo/fav-icon/64x64/png/favicon64x64.png',
       },
     },
+    // Open Graph meta-tags for sosiale medier
+    {
+      tagName: 'meta',
+      attributes: {
+        property: 'og:image',
+        content: 'https://trausland.github.io/stilogtone-hub/img/skatteetatenlogo.png',
+      },
+    },
+    {
+      tagName: 'meta',
+      attributes: {
+        property: 'og:image:alt',
+        content: 'Skatteetaten logo',
+      },
+    },
+    // Twitter Card meta-tags
+    {
+      tagName: 'meta',
+      attributes: {
+        name: 'twitter:image',
+        content: 'https://trausland.github.io/stilogtone-hub/img/skatteetatenlogo.png',
+      },
+    },
+    {
+      tagName: 'meta',
+      attributes: {
+        name: 'twitter:image:alt',
+        content: 'Skatteetaten logo',
+      },
+    },
     // Inline Firebase-konfigurasjon i HTML-en for klientside-tilgang
     {
       tagName: 'script',
@@ -125,7 +155,7 @@ const config: Config = {
   ],
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/skatteetatenlogo.png',
     colorMode: {
       defaultMode: 'light',
       disableSwitch: true,

@@ -76,8 +76,8 @@ function extractHeadings(html, baseUrl) {
     const anchorId = href.substring(1); // Remove #
     allAnchorIds.add(anchorId);
     
-    // Check if this is a GUID-based ID
-    const isGuidBased = anchorId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+    // Check if this is a GUID-based ID (with or without dash after ID)
+    const isGuidBased = anchorId.match(/^ID-?[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
     
     // Find the heading this link is associated with
     // Could be a sibling, parent, or nearby heading
@@ -155,7 +155,26 @@ function extractHeadings(html, baseUrl) {
       
       // Check if this element is a heading or associated with one
       const $heading = $elem.is('h2, h3, h4') ? $elem : $elem.closest('h2, h3, h4').first();
-      if (!$heading.length && $elem.closest('a').length === 0) {
+      if ($heading.length) {
+        // If this element IS a heading with an ID, prioritize it in the mapping
+        const headingText = $heading.text().trim();
+        if (headingText) {
+          // Always use the heading's own ID if it exists (prioritize semantic IDs on headings)
+          if (!headingToAnchorMap.has(headingText)) {
+            headingToAnchorMap.set(headingText, id);
+          } else {
+            const existingId = headingToAnchorMap.get(headingText);
+            const existingIsGuid = existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+            // Replace GUID-based ID with semantic ID, or if this is a heading's own ID, always use it
+            if (existingIsGuid && !isGuidBased) {
+              headingToAnchorMap.set(headingText, id);
+            } else if ($elem.is('h2, h3, h4') && !isGuidBased) {
+              // If this is the heading element itself with a semantic ID, always use it
+              headingToAnchorMap.set(headingText, id);
+            }
+          }
+        }
+      } else if (!$heading.length && $elem.closest('a, button').length === 0) {
         // Check if heading is nearby
         const $nearbyHeading = $elem.prev('h2, h3, h4').first();
         if ($nearbyHeading.length) {
@@ -181,28 +200,51 @@ function extractHeadings(html, baseUrl) {
   // Extract h2, h3, h4 as subheadings
   $('h2, h3, h4').each((i, elem) => {
     const $elem = $(elem);
-    // Normalize text: trim and replace newlines/multiple spaces with single space
-    const text = $elem.text().trim().replace(/\s+/g, ' ').replace(/\n/g, ' ');
+    const text = $elem.text().trim();
     if (!text) return;
     
     let id = null;
     let guidBasedId = null; // Store GUID-based IDs separately
     
-    // First, try to use existing ID attribute if present
-    const existingId = $elem.attr('id');
-    if (existingId) {
-      // Check if it's a GUID-based ID (starts with "ID-" followed by UUID pattern)
-      if (existingId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
-        guidBasedId = existingId;
-      } else {
-        // It's a semantic ID, use it
-        id = existingId;
+    // CRITICAL: First, check if heading element has a semantic ID on itself
+    // This must be checked FIRST to ensure it's always prioritized over any other IDs
+    const headingSemanticId = $elem.attr('id');
+    if (headingSemanticId && !headingSemanticId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+      // Always use the heading's own semantic ID if it exists (like id="innholdsdesign")
+      id = headingSemanticId;
+    } else if (headingSemanticId && headingSemanticId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+      // Store GUID-based ID separately
+      guidBasedId = headingSemanticId;
+    }
+    
+    // Also check if there's an anchor link inside the heading that points to a semantic ID
+    // This handles cases where the ID is added dynamically with JavaScript (e.g., by Docusaurus)
+    // The anchor link (e.g., <a href="#innholdsdesign">) is in the HTML, but the ID on the heading
+    // element itself is added dynamically, so we use the anchor link's href as the semantic ID
+    if (!id) {
+      const $anchor = $elem.find('a[href^="#"]');
+      if ($anchor.length) {
+        $anchor.each((j, anchor) => {
+          const href = $(anchor).attr('href');
+          if (href && href.startsWith('#')) {
+            const targetId = href.substring(1);
+            // Check if it's a semantic ID (not GUID-based)
+            if (!targetId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
+              // Use the semantic ID from the anchor link directly
+              // Don't check if element exists since ID is added dynamically with JavaScript
+              id = targetId;
+              return false; // Break out of each loop
+            }
+          }
+        });
       }
     }
     
-    // If no semantic ID exists, check if heading is wrapped in an anchor tag
+    // If no semantic ID exists, check if heading is wrapped in an anchor tag or button
+    // Also check if there's a button inside the heading with a data-target pointing to a GUID-based ID
     if (!id) {
-      const $parentAnchor = $elem.closest('a[id]');
+      // First, check if heading is wrapped in an anchor tag or button
+      const $parentAnchor = $elem.closest('a[id], button[id]');
       if ($parentAnchor.length) {
         const parentId = $parentAnchor.attr('id');
         if (!parentId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
@@ -211,11 +253,57 @@ function extractHeadings(html, baseUrl) {
           guidBasedId = parentId;
         }
       }
+      
+      // Check if there's a button inside the heading with a span.oc-heading
+      // For headings with buttons, the button text usually matches the semantic ID
+      // Generate semantic ID from button text instead of using GUID from data-target
+      if (!id) {
+        const $button = $elem.find('button');
+        if ($button.length) {
+          let buttonText = null;
+          
+          // First, look for span.oc-heading inside the button
+          const $ocHeading = $button.find('span.oc-heading');
+          if ($ocHeading.length) {
+            buttonText = $ocHeading.text().trim();
+            
+            // Also check for span.oc-ingress (for multi-line buttons)
+            const $ocIngress = $button.find('span.oc-ingress');
+            if ($ocIngress.length) {
+              const ingressText = $ocIngress.text().trim();
+              if (ingressText) {
+                // Combine heading and ingress text
+                buttonText = `${buttonText} ${ingressText}`;
+              }
+            }
+          } else {
+            // If no span.oc-heading found, use button text directly
+            buttonText = $button.text().trim();
+          }
+          
+          if (buttonText) {
+            // Generate semantic ID from button text (like Docusaurus does)
+            const normalizedText = buttonText.replace(/\s+/g, ' ').replace(/\n/g, ' ').trim();
+            const generatedId = normalizedText
+              .toLowerCase()
+              .replace(/å/g, 'a')
+              .replace(/æ/g, 'ae')
+              .replace(/ø/g, 'o')
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .substring(0, 100);
+            
+            // Use the generated semantic ID
+            id = generatedId;
+          }
+        }
+      }
     }
     
-    // If still no semantic ID, check if there's an anchor tag before the heading
+    // If still no semantic ID, check if there's an anchor tag or button before the heading
     if (!id) {
-      const $prevAnchor = $elem.prev('a[id]');
+      const $prevAnchor = $elem.prev('a[id], button[id]');
       if ($prevAnchor.length) {
         const prevId = $prevAnchor.attr('id');
         if (!prevId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
@@ -226,9 +314,9 @@ function extractHeadings(html, baseUrl) {
       }
     }
     
-    // If still no semantic ID, check if there's an anchor tag that wraps or is near the heading
+    // If still no semantic ID, check if there's an anchor tag or button that wraps or is near the heading
     if (!id) {
-      const $nearbyAnchor = $elem.siblings('a[id]').first();
+      const $nearbyAnchor = $elem.siblings('a[id], button[id]').first();
       if ($nearbyAnchor.length) {
         const nearbyId = $nearbyAnchor.attr('id');
         if (!nearbyId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
@@ -242,7 +330,9 @@ function extractHeadings(html, baseUrl) {
     // If still no semantic ID, try to find elements with semantic IDs that match this heading
     // First, check if an element with a semantic ID exists on the page
     if (!id) {
-      const generatedId = text
+      // Normalize text for ID generation (remove newlines and extra spaces)
+      const normalizedText = text.replace(/\s+/g, ' ').replace(/\n/g, ' ').trim();
+      const generatedId = normalizedText
         .toLowerCase()
         .replace(/å/g, 'a')
         .replace(/æ/g, 'ae')
@@ -256,14 +346,21 @@ function extractHeadings(html, baseUrl) {
       const $targetElement = $(`#${generatedId}`);
       if ($targetElement.length > 0) {
         // Check if this element is the heading or associated with it
+        // Normalize heading text for comparison
         const $targetHeading = $targetElement.is('h2, h3, h4') ? $targetElement : $targetElement.closest('h2, h3, h4').first();
-        if ($targetHeading.length && $targetHeading.text().trim() === text) {
-          id = generatedId;
-        } else if (!$targetHeading.length) {
+        if ($targetHeading.length) {
+          const targetHeadingText = $targetHeading.text().trim().replace(/\s+/g, ' ').replace(/\n/g, ' ');
+          if (targetHeadingText === normalizedText) {
+            id = generatedId;
+          }
+        } else {
           // Check if heading is nearby
           const $nearbyHeading = $targetElement.prev('h2, h3, h4').first();
-          if ($nearbyHeading.length && $nearbyHeading.text().trim() === text) {
-            id = generatedId;
+          if ($nearbyHeading.length) {
+            const nearbyHeadingText = $nearbyHeading.text().trim().replace(/\s+/g, ' ').replace(/\n/g, ' ');
+            if (nearbyHeadingText === normalizedText) {
+              id = generatedId;
+            }
           }
         }
       }
@@ -277,14 +374,14 @@ function extractHeadings(html, baseUrl) {
           if (!$linkHeading.length) {
             const $nextHeading = $anchorLink.next('h2, h3, h4').first();
             if ($nextHeading.length && $nextHeading.text().trim() === text) {
-              // Verify the ID actually exists on the page
-              if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
+              // Verify the ID actually exists on the page (element must exist, not just a link pointing to it)
+              if ($(`#${generatedId}`).length > 0) {
                 id = generatedId;
               }
             }
           } else if ($linkHeading.text().trim() === text) {
-            // Verify the ID actually exists on the page
-            if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
+            // Verify the ID actually exists on the page (element must exist, not just a link pointing to it)
+            if ($(`#${generatedId}`).length > 0) {
               id = generatedId;
             }
           }
@@ -293,14 +390,14 @@ function extractHeadings(html, baseUrl) {
     }
     
     // If still no semantic ID, check our mapping from anchor links (prioritize semantic IDs)
+    // But only if the heading element itself doesn't have a semantic ID
     if (!id && headingToAnchorMap.has(text)) {
       const mappedId = headingToAnchorMap.get(text);
       // Only use if it's not a GUID-based ID
       if (!mappedId.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i)) {
-        // Verify the ID actually exists on the page
-        if (allAnchorIds.has(mappedId) || $(`#${mappedId}`).length > 0) {
-          id = mappedId;
-        }
+        // Use semantic ID from mapping directly
+        // Don't check if element exists since ID might be added dynamically with JavaScript
+        id = mappedId;
       } else if (!guidBasedId) {
         guidBasedId = mappedId;
       }
@@ -330,9 +427,14 @@ function extractHeadings(html, baseUrl) {
       }
     }
     
-    // Final fallback: generate ID from heading text, but only if it exists on the page
+    // Final fallback: generate ID from heading text (like Docusaurus does)
+    // This handles cases where IDs are added dynamically with JavaScript
+    // We generate the semantic ID based on the heading text and use it directly
+    // since Docusaurus will add the ID dynamically when the page loads
     if (!id) {
-      const generatedId = text
+      // Normalize text for ID generation (remove newlines and extra spaces)
+      const normalizedText = text.replace(/\s+/g, ' ').replace(/\n/g, ' ').trim();
+      const generatedId = normalizedText
         .toLowerCase()
         .replace(/å/g, 'a')
         .replace(/æ/g, 'ae')
@@ -342,24 +444,48 @@ function extractHeadings(html, baseUrl) {
         .replace(/-+/g, '-')
         .substring(0, 100);
       
-      // Only use generated ID if an element with this ID actually exists on the page
-      if (allAnchorIds.has(generatedId) || $(`#${generatedId}`).length > 0) {
+      // Always use the generated semantic ID if it's not empty
+      // Even if element or anchor link doesn't exist yet, Docusaurus will add it dynamically
+      if (generatedId) {
         id = generatedId;
       }
     }
     
     // Only use GUID-based ID as last resort if no semantic ID was found
     if (!id && guidBasedId) {
-      // Verify GUID-based ID exists on the page
-      if (allAnchorIds.has(guidBasedId) || $(`#${guidBasedId}`).length > 0) {
+      // Verify GUID-based ID exists on the page (element must exist, not just a link pointing to it)
+      if ($(`#${guidBasedId}`).length > 0) {
         id = guidBasedId;
       }
     }
     
     const level = elem.tagName === 'h2' ? 1 : elem.tagName === 'h3' ? 2 : 3;
     
-    // Only include ID if it actually exists on the page
-    const verifiedId = id && (allAnchorIds.has(id) || $(`#${id}`).length > 0) ? id : null;
+    // Include ID if:
+    // 1. Element exists on the page, OR
+    // 2. There's an anchor link pointing to it (even if element doesn't exist yet - it will be added dynamically)
+    // 3. It's a generated semantic ID (not GUID-based) - assume it will be added dynamically
+    let verifiedId = null;
+    if (id) {
+      const isGuidBased = id.match(/^ID-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+      if ($(`#${id}`).length > 0) {
+        // Element exists, use it
+        verifiedId = id;
+      } else if (!isGuidBased) {
+        // Semantic ID doesn't exist yet, but check if there's an anchor link pointing to it
+        // This handles cases where ID is added dynamically with JavaScript
+        const $anchorLink = $(`a[href="#${id}"]`);
+        if ($anchorLink.length > 0) {
+          // There's an anchor link pointing to this ID, use it even if element doesn't exist yet
+          // The ID will be added dynamically with JavaScript when the page loads
+          verifiedId = id;
+        } else {
+          // No anchor link found, but if it's a generated semantic ID, assume it will be added dynamically
+          // Only use if it's not a GUID-based ID
+          verifiedId = id;
+        }
+      }
+    }
     
     headings.push({
       title: text,

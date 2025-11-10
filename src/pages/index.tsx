@@ -110,9 +110,17 @@ function SearchResults({ query }: { query: string }) {
       return { noResults: true };
     }
     
-    // Fjern duplikater basert på URL (men behold første forekomst)
+    // Fjern duplikater basert på URL og heading (men behold første forekomst)
+    // Dette sikrer at headings med samme URL (men forskjellig heading) ikke blir fjernet
     const uniqueResults = reorganized.filter((result, index, self) =>
-      index === self.findIndex(r => r.url === result.url)
+      index === self.findIndex(r => {
+        // Hvis begge har heading, må både URL og heading matche for å være duplikat
+        if (r.heading && result.heading) {
+          return r.url === result.url && r.heading === result.heading;
+        }
+        // Hvis ingen av dem har heading, eller bare en har heading, sjekk bare URL
+        return r.url === result.url;
+      })
     );
     
     // Grupper etter category og organisér slik at hovedsider kommer først med sine undertemaer
